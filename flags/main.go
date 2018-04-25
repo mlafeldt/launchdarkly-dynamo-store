@@ -16,7 +16,10 @@ func main() {
 }
 
 func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	log.Printf("Received webhook payload: %s", req.Body)
+	log.Printf("Webhook payload = %s", req.Body)
+
+	// TODO: verify signature
+	log.Printf("Payload signature = %s", req.Headers["X-Ld-Signature"])
 
 	// TODO: use RedisFeatureStore
 	config := ld.DefaultConfig
@@ -28,7 +31,7 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	}
 	defer ldClient.Close()
 
-	log.Print("Updated flag store")
+	log.Print("Successfully updated flag store!")
 
 	return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 }
