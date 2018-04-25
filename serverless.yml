@@ -18,4 +18,4 @@ functions:
     events:
       - http:
          path: /flags
-         method: get
+         method: post

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
@@ -10,5 +12,9 @@ func main() {
 }
 
 func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	return &events.APIGatewayProxyResponse{Body: "Hello World!", StatusCode: 200}, nil
+	log.Printf("webhook payload = %s", req.Body)
+
+	// TODO: populate Redis flag store
+
+	return &events.APIGatewayProxyResponse{StatusCode: 200}, nil
 }
