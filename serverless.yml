@@ -1,0 +1,21 @@
+service: serverless-ldr
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: ${opt:stage, 'staging'}
+  region: ${env:AWS_REGION}
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  flags:
+    handler: bin/flags
+    events:
+      - http:
+         path: /flags
+         method: get

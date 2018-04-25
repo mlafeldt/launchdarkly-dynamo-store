@@ -1,0 +1,8 @@
+[[constraint]]
+  name = "github.com/aws/aws-lambda-go"
+  version = "v1.*"
+
+[prune]
+  go-tests = true
+  unused-packages = true
+  non-go = true
