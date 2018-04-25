@@ -12,9 +12,39 @@
   revision = "fafa7e49388b8991caf99308e80655ba91816b72"
   version = "v1.1.0"
 
+[[projects]]
+  name = "github.com/blang/semver"
+  packages = ["."]
+  revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
+  version = "v3.5.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/facebookgo/httpcontrol"
+  packages = ["."]
+  revision = "ccde4420e1fee9af5da365cb76075b95683f39a6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gregjones/httpcache"
+  packages = ["."]
+  revision = "9cad4c3443a7200dd6400aef47183728de563a38"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/launchdarkly/eventsource"
+  packages = ["."]
+  revision = "4dcc408992f5425530844cb28cb718ea0908c17c"
+
+[[projects]]
+  name = "gopkg.in/launchdarkly/go-client.v3"
+  packages = ["."]
+  revision = "bbb4da333e689b54d411065a796032c55fa0537f"
+  version = "3.1.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1d824a6429f89c276153547f37ad0a0966c5a1145f78e261bc129ca4b46c9a39"
+  inputs-digest = "3d431441466e252c35831e01141752c1cde8ac38fe734a22eb80db51631aa7ea"
   solver-name = "gps-cdcl"
   solver-version = 1

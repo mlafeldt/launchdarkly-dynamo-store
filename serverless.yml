@@ -5,6 +5,8 @@ provider:
   runtime: go1.x
   stage: ${opt:stage, 'staging'}
   region: ${env:AWS_REGION}
+  environment:
+    LAUNCHDARKLY_SDK_KEY: ${env:LAUNCHDARKLY_SDK_KEY}
 
 package:
   exclude:

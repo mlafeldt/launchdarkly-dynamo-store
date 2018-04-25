@@ -2,6 +2,10 @@
   name = "github.com/aws/aws-lambda-go"
   version = "v1.*"
 
+[[constraint]]
+  name = "gopkg.in/launchdarkly/go-client.v3"
+  version = "3.*"
+
 [prune]
   go-tests = true
   unused-packages = true
