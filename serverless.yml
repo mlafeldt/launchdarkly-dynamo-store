@@ -5,7 +5,17 @@ provider:
   runtime: go1.x
   stage: ${opt:stage, 'staging'}
   region: ${env:AWS_REGION}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource:
+        Fn::GetAtt:
+          - DynamoDBTable
+          - Arn
   environment:
+    DYNAMODB_TABLE:
+      Ref: DynamoDBTable
     LAUNCHDARKLY_SDK_KEY: ${env:LAUNCHDARKLY_SDK_KEY}
 
 package:
@@ -21,3 +31,19 @@ functions:
       - http:
          path: /flags
          method: post
+
+resources:
+  Resources:
+    DynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-flags
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1

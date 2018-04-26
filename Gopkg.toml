@@ -3,6 +3,10 @@
   version = "v1.*"
 
 [[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "v1.*"
+
+[[constraint]]
   name = "gopkg.in/launchdarkly/go-client.v3"
   version = "3.*"
 

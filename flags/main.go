@@ -21,8 +21,14 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	// TODO: verify signature
 	log.Printf("Payload signature = %s", req.Headers["X-Ld-Signature"])
 
-	// TODO: use RedisFeatureStore
+	store, err := NewDynamoDBFeatureStore(os.Getenv("DYNAMODB_TABLE"))
+	if err != nil {
+		log.Printf("Failed to initialize DynamoDBFeatureStore: %s", err)
+		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, nil
+	}
+
 	config := ld.DefaultConfig
+	config.FeatureStore = store
 
 	ldClient, err := ld.MakeCustomClient(os.Getenv("LAUNCHDARKLY_SDK_KEY"), config, 5*time.Second)
 	if err != nil {
