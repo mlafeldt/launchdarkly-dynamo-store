@@ -54,6 +54,12 @@
   version = "v3.5.1"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/facebookgo/httpcontrol"
   packages = ["."]
@@ -83,14 +89,29 @@
   revision = "4dcc408992f5425530844cb28cb718ea0908c17c"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
+
+[[projects]]
   name = "gopkg.in/launchdarkly/go-client.v3"
-  packages = ["."]
+  packages = [
+    ".",
+    "shared_test"
+  ]
   revision = "bbb4da333e689b54d411065a796032c55fa0537f"
   version = "3.1.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "45b6c29fb104acd06ff9c25608d7089901884bc90fb17f2d84ced4336f8bf70d"
+  inputs-digest = "b767a7a11b527f022e6ffce6ea7bbda5a85bc0f098e5c25f17c0a4ed8d322c84"
   solver-name = "gps-cdcl"
   solver-version = 1
