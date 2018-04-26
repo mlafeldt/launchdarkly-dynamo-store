@@ -19,7 +19,7 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	log.Printf("Webhook payload = %s", req.Body)
 
 	// TODO: verify signature
-	log.Printf("Payload signature = %s", req.Headers["X-Ld-Signature"])
+	log.Printf("Webhook payload signature = %s", req.Headers["X-Ld-Signature"])
 
 	store, err := NewDynamoDBFeatureStore(os.Getenv("DYNAMODB_TABLE"))
 	if err != nil {
@@ -37,7 +37,6 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	}
 	defer ldClient.Close()
 
-	log.Print("Successfully updated flag store!")
-
+	log.Print("Successfully updated feature store!")
 	return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 }
