@@ -10,12 +10,14 @@ provider:
       Action:
         - dynamodb:*
       Resource:
-        Fn::GetAtt:
-          - DynamoDBTable
-          - Arn
+        - Fn::GetAtt:
+            - FeaturesTable
+            - Arn
+        - Fn::GetAtt:
+            - SegmentsTable
+            - Arn
   environment:
-    DYNAMODB_TABLE:
-      Ref: DynamoDBTable
+    DYNAMODB_TABLE_PREFIX: ${self:service}
     LAUNCHDARKLY_SDK_KEY: ${env:LAUNCHDARKLY_SDK_KEY}
 
 package:
@@ -34,15 +36,28 @@ functions:
 
 resources:
   Resources:
-    DynamoDBTable:
+    FeaturesTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-flags
+        TableName: ${self:service}-features
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: key
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: key
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    SegmentsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-segments
+        AttributeDefinitions:
+          - AttributeName: key
+            AttributeType: S
+        KeySchema:
+          - AttributeName: key
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1

@@ -9,12 +9,12 @@ import (
 )
 
 type StoreBuilder struct {
-	t         *testing.T
-	tableName string
+	t           *testing.T
+	tablePrefix string
 }
 
 func (builder *StoreBuilder) Build() ld.FeatureStore {
-	store, err := NewDynamoDBFeatureStore(builder.tableName)
+	store, err := NewDynamoDBFeatureStore(builder.tablePrefix)
 	if err != nil {
 		builder.t.Fatal(err)
 	}
@@ -22,11 +22,11 @@ func (builder *StoreBuilder) Build() ld.FeatureStore {
 }
 
 func TestDynamoDBFeatureStore(t *testing.T) {
-	tableName := os.Getenv("DYNAMODB_TABLE")
-	if tableName == "" {
-		t.Skip("DYNAMODB_TABLE not set in environment")
+	tablePrefix := os.Getenv("DYNAMODB_TABLE_PREFIX")
+	if tablePrefix == "" {
+		t.Skip("DYNAMODB_TABLE_PREFIX not set in environment")
 	}
 
-	builder := StoreBuilder{t, tableName}
+	builder := StoreBuilder{t, tablePrefix}
 	ldtest.RunFeatureStoreTests(t, builder.Build)
 }

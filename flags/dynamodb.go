@@ -7,16 +7,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	ld "gopkg.in/launchdarkly/go-client.v3"
 )
 
 type DynamoDBFeatureStore struct {
-	client    *dynamodb.DynamoDB
-	tableName string
-	logger    ld.Logger
+	client      *dynamodb.DynamoDB
+	tablePrefix string
+	logger      ld.Logger
+	initialized bool
 }
 
-func NewDynamoDBFeatureStore(tableName string) (*DynamoDBFeatureStore, error) {
+func NewDynamoDBFeatureStore(tablePrefix string) (*DynamoDBFeatureStore, error) {
 	logger := log.New(os.Stderr, "[LaunchDarkly DynamoDBFeatureStore]", log.LstdFlags)
 
 	sess, err := session.NewSession()
@@ -25,18 +27,11 @@ func NewDynamoDBFeatureStore(tableName string) (*DynamoDBFeatureStore, error) {
 	}
 	client := dynamodb.New(sess)
 
-	info, err := client.DescribeTable(&dynamodb.DescribeTableInput{
-		TableName: aws.String(tableName),
-	})
-	if err != nil {
-		return nil, err
-	}
-	logger.Printf("DynamoDB table = %s", info.Table)
-
 	return &DynamoDBFeatureStore{
-		client:    client,
-		tableName: tableName,
-		logger:    logger,
+		client:      client,
+		tablePrefix: tablePrefix,
+		logger:      logger,
+		initialized: false,
 	}, nil
 }
 
@@ -47,11 +42,21 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
 	// TODO
-	return nil, nil
+	results := make(map[string]ld.VersionedData)
+
+	return results, nil
 }
 
-func (store *DynamoDBFeatureStore) Init(map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
-	// TODO
+func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
+	for kind, items := range allData {
+		table := store.tableName(kind.GetNamespace())
+		for _, v := range items {
+			if err := store.putItem(table, v); err != nil {
+				return err
+			}
+		}
+	}
+	store.initialized = true
 	return nil
 }
 
@@ -66,6 +71,21 @@ func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.Ver
 }
 
 func (store *DynamoDBFeatureStore) Initialized() bool {
-	// TODO
-	return false
+	return store.initialized
+}
+
+func (store *DynamoDBFeatureStore) tableName(namespace string) string {
+	return store.tablePrefix + "-" + namespace
+}
+
+func (store *DynamoDBFeatureStore) putItem(table string, v interface{}) error {
+	av, err := dynamodbattribute.MarshalMap(v)
+	if err != nil {
+		return err
+	}
+	_, err1 := store.client.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(table),
+		Item:      av,
+	})
+	return err1
 }
