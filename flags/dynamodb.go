@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	ld "gopkg.in/launchdarkly/go-client.v3"
 )
+
+const PrimaryPartitionKey = "key"
 
 type DynamoDBFeatureStore struct {
 	client      *dynamodb.DynamoDB
@@ -36,8 +39,41 @@ func NewDynamoDBFeatureStore(tablePrefix string) (*DynamoDBFeatureStore, error) 
 }
 
 func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (ld.VersionedData, error) {
-	// TODO
-	return nil, nil
+	table := store.tableName(kind.GetNamespace())
+	input := &dynamodb.GetItemInput{
+		TableName: aws.String(table),
+		Key: map[string]*dynamodb.AttributeValue{
+			PrimaryPartitionKey: {S: aws.String(key)},
+		},
+	}
+
+	result, err := store.client.GetItem(input)
+	if err != nil {
+		store.logger.Printf("ERR: Failed to get item (key=%s table=%s): %s", key, table, err)
+		return nil, err
+	}
+
+	if len(result.Item) == 0 {
+		store.logger.Printf("WARN: Item not found (key=%s table=%s)", key, table)
+		return nil, nil
+	}
+
+	data := kind.GetDefaultItem()
+	if err := dynamodbattribute.UnmarshalMap(result.Item, &data); err != nil {
+		store.logger.Printf("ERR: Failed to unmarshal item (key=%s table=%s): %s", key, table, err)
+		return nil, err
+	}
+	item, ok := data.(ld.VersionedData)
+	if !ok {
+		return nil, fmt.Errorf("Unexpected data type from unmarshal: %T", data)
+	}
+
+	if item.IsDeleted() {
+		store.logger.Printf("WARN: Attempted to get deleted item (key=%s table=%s)", key, table)
+		return nil, nil
+	}
+
+	return item, nil
 }
 
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
