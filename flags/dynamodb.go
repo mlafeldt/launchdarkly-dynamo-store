@@ -50,8 +50,18 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
 	for kind, items := range allData {
 		table := store.tableName(kind.GetNamespace())
-		for _, v := range items {
-			if err := store.putItem(table, v); err != nil {
+		for k, v := range items {
+			av, err := dynamodbattribute.MarshalMap(v)
+			if err != nil {
+				store.logger.Printf("ERR: Failed to marshal item (key=%s table=%s): %s", k, table, err)
+				return err
+			}
+			_, err = store.client.PutItem(&dynamodb.PutItemInput{
+				TableName: aws.String(table),
+				Item:      av,
+			})
+			if err != nil {
+				store.logger.Printf("ERR: Failed to put item (key=%s table=%s): %s", k, table, err)
 				return err
 			}
 		}
@@ -76,16 +86,4 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 
 func (store *DynamoDBFeatureStore) tableName(namespace string) string {
 	return store.tablePrefix + "-" + namespace
-}
-
-func (store *DynamoDBFeatureStore) putItem(table string, v interface{}) error {
-	av, err := dynamodbattribute.MarshalMap(v)
-	if err != nil {
-		return err
-	}
-	_, err1 := store.client.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(table),
-		Item:      av,
-	})
-	return err1
 }
