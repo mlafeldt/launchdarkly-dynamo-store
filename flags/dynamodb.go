@@ -132,7 +132,23 @@ func (store *DynamoDBFeatureStore) Delete(kind ld.VersionedDataKind, key string,
 }
 
 func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.VersionedData) error {
-	// TODO
+	// TODO: handle versions
+	table := store.tableName(kind.GetNamespace())
+
+	av, err := dynamodbattribute.MarshalMap(item)
+	if err != nil {
+		store.logger.Printf("ERR: Failed to marshal item (key=%s table=%s): %s", item.GetKey(), table, err)
+		return err
+	}
+	_, err = store.client.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(table),
+		Item:      av,
+	})
+	if err != nil {
+		store.logger.Printf("ERR: Failed to put item (key=%s table=%s): %s", item.GetKey(), table, err)
+		return err
+	}
+
 	return nil
 }
 
