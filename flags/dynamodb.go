@@ -51,7 +51,7 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 
 	result, err := store.client.GetItem(input)
 	if err != nil {
-		store.logger.Printf("ERR: Failed to get item (key=%s table=%s): %s", key, table, err)
+		store.logger.Printf("ERROR: Failed to get item (key=%s table=%s): %s", key, table, err)
 		return nil, err
 	}
 
@@ -62,7 +62,7 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 
 	item, err := unmarshalItem(kind, result.Item)
 	if err != nil {
-		store.logger.Printf("ERR: Failed to unmarshal item (key=%s table=%s): %s", key, table, err)
+		store.logger.Printf("ERROR: Failed to unmarshal item (key=%s table=%s): %s", key, table, err)
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 		return !lastPage
 	})
 	if err != nil {
-		store.logger.Printf("ERR: Failed to scan pages (table=%s): %s", table, err)
+		store.logger.Printf("ERROR: Failed to scan pages (table=%s): %s", table, err)
 		return nil, err
 	}
 
@@ -94,7 +94,7 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 	for _, i := range items {
 		item, err := unmarshalItem(kind, i)
 		if err != nil {
-			store.logger.Printf("ERR: Failed to unmarshal item (table=%s): %s", table, err)
+			store.logger.Printf("ERROR: Failed to unmarshal item (table=%s): %s", table, err)
 			return nil, err
 		}
 		if !item.IsDeleted() {
@@ -110,14 +110,14 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 		table := store.tableName(kind.GetNamespace())
 
 		if err := store.truncate(kind); err != nil {
-			store.logger.Printf("ERR: Failed to delete all items (table=%s): %s", table, err)
+			store.logger.Printf("ERROR: Failed to delete all items (table=%s): %s", table, err)
 			return err
 		}
 
 		for k, v := range items {
 			av, err := dynamodbattribute.MarshalMap(v)
 			if err != nil {
-				store.logger.Printf("ERR: Failed to marshal item (key=%s table=%s): %s", k, table, err)
+				store.logger.Printf("ERROR: Failed to marshal item (key=%s table=%s): %s", k, table, err)
 				return err
 			}
 			_, err = store.client.PutItem(&dynamodb.PutItemInput{
@@ -125,7 +125,7 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 				Item:      av,
 			})
 			if err != nil {
-				store.logger.Printf("ERR: Failed to put item (key=%s table=%s): %s", k, table, err)
+				store.logger.Printf("ERROR: Failed to put item (key=%s table=%s): %s", k, table, err)
 				return err
 			}
 		}
@@ -156,7 +156,7 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 
 	av, err := dynamodbattribute.MarshalMap(item)
 	if err != nil {
-		store.logger.Printf("ERR: Failed to marshal item (key=%s table=%s): %s", item.GetKey(), table, err)
+		store.logger.Printf("ERROR: Failed to marshal item (key=%s table=%s): %s", item.GetKey(), table, err)
 		return err
 	}
 	_, err = store.client.PutItem(&dynamodb.PutItemInput{
@@ -175,7 +175,7 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == dynamodb.ErrCodeConditionalCheckFailedException {
 			return nil
 		}
-		store.logger.Printf("ERR: Failed to put item (key=%s table=%s): %s", item.GetKey(), table, err)
+		store.logger.Printf("ERROR: Failed to put item (key=%s table=%s): %s", item.GetKey(), table, err)
 		return err
 	}
 
@@ -195,14 +195,14 @@ func (store *DynamoDBFeatureStore) truncate(kind ld.VersionedDataKind) error {
 		return !lastPage
 	})
 	if err != nil {
-		store.logger.Printf("ERR: Failed to scan pages (table=%s): %s", table, err)
+		store.logger.Printf("ERROR: Failed to scan pages (table=%s): %s", table, err)
 		return err
 	}
 
 	for _, i := range items {
 		item, err := unmarshalItem(kind, i)
 		if err != nil {
-			store.logger.Printf("ERR: Failed to unmarshal item (table=%s): %s", table, err)
+			store.logger.Printf("ERROR: Failed to unmarshal item (table=%s): %s", table, err)
 			return err
 		}
 
@@ -213,7 +213,7 @@ func (store *DynamoDBFeatureStore) truncate(kind ld.VersionedDataKind) error {
 			},
 		})
 		if err != nil {
-			store.logger.Printf("ERR: Failed to delete item (key=%s table=%s): %s", item.GetKey(), table, err)
+			store.logger.Printf("ERROR: Failed to delete item (key=%s table=%s): %s", item.GetKey(), table, err)
 			return err
 		}
 	}
