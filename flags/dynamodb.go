@@ -135,11 +135,23 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 }
 
 func (store *DynamoDBFeatureStore) Delete(kind ld.VersionedDataKind, key string, version int) error {
-	// TODO
-	return nil
+	deletedItem := kind.MakeDeletedItem(key, version)
+	return store.updateWithVersioning(kind, deletedItem)
 }
 
 func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.VersionedData) error {
+	return store.updateWithVersioning(kind, item)
+}
+
+func (store *DynamoDBFeatureStore) Initialized() bool {
+	return store.initialized
+}
+
+func (store *DynamoDBFeatureStore) tableName(namespace string) string {
+	return store.tablePrefix + "-" + namespace
+}
+
+func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKind, item ld.VersionedData) error {
 	table := store.tableName(kind.GetNamespace())
 
 	av, err := dynamodbattribute.MarshalMap(item)
@@ -168,14 +180,6 @@ func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.Ver
 	}
 
 	return nil
-}
-
-func (store *DynamoDBFeatureStore) Initialized() bool {
-	return store.initialized
-}
-
-func (store *DynamoDBFeatureStore) tableName(namespace string) string {
-	return store.tablePrefix + "-" + namespace
 }
 
 func (store *DynamoDBFeatureStore) truncateTable(table string) error {
