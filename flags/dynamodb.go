@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -138,7 +140,6 @@ func (store *DynamoDBFeatureStore) Delete(kind ld.VersionedDataKind, key string,
 }
 
 func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.VersionedData) error {
-	// TODO: handle versions
 	table := store.tableName(kind.GetNamespace())
 
 	av, err := dynamodbattribute.MarshalMap(item)
@@ -147,10 +148,21 @@ func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.Ver
 		return err
 	}
 	_, err = store.client.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(table),
-		Item:      av,
+		TableName:           aws.String(table),
+		Item:                av,
+		ConditionExpression: aws.String("attribute_not_exists(#key) or :version > #version"),
+		ExpressionAttributeNames: map[string]*string{
+			"#key":     aws.String("key"),
+			"#version": aws.String("version"),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":version": &dynamodb.AttributeValue{N: aws.String(strconv.Itoa(item.GetVersion()))},
+		},
 	})
 	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == dynamodb.ErrCodeConditionalCheckFailedException {
+			return nil
+		}
 		store.logger.Printf("ERR: Failed to put item (key=%s table=%s): %s", item.GetKey(), table, err)
 		return err
 	}
