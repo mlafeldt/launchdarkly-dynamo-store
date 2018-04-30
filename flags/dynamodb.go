@@ -106,6 +106,12 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
 	for kind, items := range allData {
 		table := store.tableName(kind.GetNamespace())
+
+		if err := store.truncateTable(table); err != nil {
+			store.logger.Printf("ERR: Failed to delete all items (table=%s): %s", table, err)
+			return err
+		}
+
 		for k, v := range items {
 			av, err := dynamodbattribute.MarshalMap(v)
 			if err != nil {
@@ -158,6 +164,11 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 
 func (store *DynamoDBFeatureStore) tableName(namespace string) string {
 	return store.tablePrefix + "-" + namespace
+}
+
+func (store *DynamoDBFeatureStore) truncateTable(table string) error {
+	// TODO
+	return nil
 }
 
 func unmarshalItem(kind ld.VersionedDataKind, item map[string]*dynamodb.AttributeValue) (ld.VersionedData, error) {
