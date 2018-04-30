@@ -58,14 +58,10 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 		return nil, nil
 	}
 
-	data := kind.GetDefaultItem()
-	if err := dynamodbattribute.UnmarshalMap(result.Item, &data); err != nil {
+	item, err := unmarshalItem(kind, result.Item)
+	if err != nil {
 		store.logger.Printf("ERR: Failed to unmarshal item (key=%s table=%s): %s", key, table, err)
 		return nil, err
-	}
-	item, ok := data.(ld.VersionedData)
-	if !ok {
-		return nil, fmt.Errorf("Unexpected data type from unmarshal: %T", data)
 	}
 
 	if item.IsDeleted() {
@@ -77,8 +73,32 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 }
 
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
-	// TODO
+	table := store.tableName(kind.GetNamespace())
+	var items []map[string]*dynamodb.AttributeValue
+
+	err := store.client.ScanPages(&dynamodb.ScanInput{
+		TableName: aws.String(table),
+	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
+		items = append(items, out.Items...)
+		return !lastPage
+	})
+	if err != nil {
+		store.logger.Printf("ERR: Failed to scan pages (table=%s): %s", table, err)
+		return nil, err
+	}
+
 	results := make(map[string]ld.VersionedData)
+
+	for _, i := range items {
+		item, err := unmarshalItem(kind, i)
+		if err != nil {
+			store.logger.Printf("ERR: Failed to unmarshal item (table=%s): %s", table, err)
+			return nil, err
+		}
+		if !item.IsDeleted() {
+			results[item.GetKey()] = item
+		}
+	}
 
 	return results, nil
 }
@@ -122,4 +142,15 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 
 func (store *DynamoDBFeatureStore) tableName(namespace string) string {
 	return store.tablePrefix + "-" + namespace
+}
+
+func unmarshalItem(kind ld.VersionedDataKind, item map[string]*dynamodb.AttributeValue) (ld.VersionedData, error) {
+	data := kind.GetDefaultItem()
+	if err := dynamodbattribute.UnmarshalMap(item, &data); err != nil {
+		return nil, err
+	}
+	if item, ok := data.(ld.VersionedData); ok {
+		return item, nil
+	}
+	return nil, fmt.Errorf("Unexpected data type from unmarshal: %T", data)
 }
