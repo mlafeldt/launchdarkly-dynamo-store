@@ -109,7 +109,7 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 	for kind, items := range allData {
 		table := store.tableName(kind.GetNamespace())
 
-		if err := store.truncateTable(table); err != nil {
+		if err := store.truncate(kind); err != nil {
 			store.logger.Printf("ERR: Failed to delete all items (table=%s): %s", table, err)
 			return err
 		}
@@ -182,8 +182,42 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 	return nil
 }
 
-func (store *DynamoDBFeatureStore) truncateTable(table string) error {
-	// TODO
+// FIXME: use BatchWriteItem etc. to speed this up
+func (store *DynamoDBFeatureStore) truncate(kind ld.VersionedDataKind) error {
+	table := store.tableName(kind.GetNamespace())
+
+	var items []map[string]*dynamodb.AttributeValue
+
+	err := store.client.ScanPages(&dynamodb.ScanInput{
+		TableName: aws.String(table),
+	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
+		items = append(items, out.Items...)
+		return !lastPage
+	})
+	if err != nil {
+		store.logger.Printf("ERR: Failed to scan pages (table=%s): %s", table, err)
+		return err
+	}
+
+	for _, i := range items {
+		item, err := unmarshalItem(kind, i)
+		if err != nil {
+			store.logger.Printf("ERR: Failed to unmarshal item (table=%s): %s", table, err)
+			return err
+		}
+
+		_, err = store.client.DeleteItem(&dynamodb.DeleteItemInput{
+			TableName: aws.String(table),
+			Key: map[string]*dynamodb.AttributeValue{
+				PrimaryPartitionKey: {S: aws.String(item.GetKey())},
+			},
+		})
+		if err != nil {
+			store.logger.Printf("ERR: Failed to delete item (key=%s table=%s): %s", item.GetKey(), table, err)
+			return err
+		}
+	}
+
 	return nil
 }
 
