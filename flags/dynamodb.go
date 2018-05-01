@@ -14,7 +14,7 @@ import (
 	ld "gopkg.in/launchdarkly/go-client.v3"
 )
 
-const PrimaryPartitionKey = "key"
+const primaryPartitionKey = "key"
 
 // Verify that the store satisfies the FeatureStore interface
 var _ ld.FeatureStore = (*DynamoDBFeatureStore)(nil)
@@ -115,7 +115,7 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(table),
 		Key: map[string]*dynamodb.AttributeValue{
-			PrimaryPartitionKey: {S: aws.String(key)},
+			primaryPartitionKey: {S: aws.String(key)},
 		},
 	}
 
@@ -166,7 +166,7 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 		Item:                av,
 		ConditionExpression: aws.String("attribute_not_exists(#key) or :version > #version"),
 		ExpressionAttributeNames: map[string]*string{
-			"#key":     aws.String("key"),
+			"#key":     aws.String(primaryPartitionKey),
 			"#version": aws.String("version"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
@@ -211,7 +211,7 @@ func (store *DynamoDBFeatureStore) truncate(kind ld.VersionedDataKind) error {
 		_, err = store.Client.DeleteItem(&dynamodb.DeleteItemInput{
 			TableName: aws.String(table),
 			Key: map[string]*dynamodb.AttributeValue{
-				PrimaryPartitionKey: {S: aws.String(item.GetKey())},
+				primaryPartitionKey: {S: aws.String(item.GetKey())},
 			},
 		})
 		if err != nil {
