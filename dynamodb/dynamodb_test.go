@@ -1,4 +1,4 @@
-package main
+package dynamodb_test
 
 import (
 	"os"
@@ -6,6 +6,8 @@ import (
 
 	ld "gopkg.in/launchdarkly/go-client.v3"
 	ldtest "gopkg.in/launchdarkly/go-client.v3/shared_test"
+
+	"github.com/mlafeldt/serverless-ldr/dynamodb"
 )
 
 type StoreBuilder struct {
@@ -14,7 +16,7 @@ type StoreBuilder struct {
 }
 
 func (builder *StoreBuilder) Build() ld.FeatureStore {
-	store, err := NewDynamoDBFeatureStore(builder.tablePrefix)
+	store, err := dynamodb.NewDynamoDBFeatureStore(builder.tablePrefix)
 	if err != nil {
 		builder.t.Fatal(err)
 	}
