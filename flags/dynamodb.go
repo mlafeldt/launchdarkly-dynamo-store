@@ -41,6 +41,72 @@ func NewDynamoDBFeatureStore(tablePrefix string) (*DynamoDBFeatureStore, error) 
 	}, nil
 }
 
+func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
+	for kind, items := range allData {
+		table := store.tableName(kind.GetNamespace())
+
+		if err := store.truncate(kind); err != nil {
+			store.Logger.Printf("ERROR: Failed to delete all items (table=%s): %s", table, err)
+			return err
+		}
+
+		for k, v := range items {
+			av, err := dynamodbattribute.MarshalMap(v)
+			if err != nil {
+				store.Logger.Printf("ERROR: Failed to marshal item (key=%s table=%s): %s", k, table, err)
+				return err
+			}
+			_, err = store.Client.PutItem(&dynamodb.PutItemInput{
+				TableName: aws.String(table),
+				Item:      av,
+			})
+			if err != nil {
+				store.Logger.Printf("ERROR: Failed to put item (key=%s table=%s): %s", k, table, err)
+				return err
+			}
+		}
+	}
+
+	store.initialized = true
+
+	return nil
+}
+
+func (store *DynamoDBFeatureStore) Initialized() bool {
+	return store.initialized
+}
+
+func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
+	table := store.tableName(kind.GetNamespace())
+	var items []map[string]*dynamodb.AttributeValue
+
+	err := store.Client.ScanPages(&dynamodb.ScanInput{
+		TableName: aws.String(table),
+	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
+		items = append(items, out.Items...)
+		return !lastPage
+	})
+	if err != nil {
+		store.Logger.Printf("ERROR: Failed to scan pages (table=%s): %s", table, err)
+		return nil, err
+	}
+
+	results := make(map[string]ld.VersionedData)
+
+	for _, i := range items {
+		item, err := unmarshalItem(kind, i)
+		if err != nil {
+			store.Logger.Printf("ERROR: Failed to unmarshal item (table=%s): %s", table, err)
+			return nil, err
+		}
+		if !item.IsDeleted() {
+			results[item.GetKey()] = item
+		}
+	}
+
+	return results, nil
+}
+
 func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (ld.VersionedData, error) {
 	table := store.tableName(kind.GetNamespace())
 	input := &dynamodb.GetItemInput{
@@ -75,81 +141,13 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 	return item, nil
 }
 
-func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
-	table := store.tableName(kind.GetNamespace())
-	var items []map[string]*dynamodb.AttributeValue
-
-	err := store.Client.ScanPages(&dynamodb.ScanInput{
-		TableName: aws.String(table),
-	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
-		items = append(items, out.Items...)
-		return !lastPage
-	})
-	if err != nil {
-		store.Logger.Printf("ERROR: Failed to scan pages (table=%s): %s", table, err)
-		return nil, err
-	}
-
-	results := make(map[string]ld.VersionedData)
-
-	for _, i := range items {
-		item, err := unmarshalItem(kind, i)
-		if err != nil {
-			store.Logger.Printf("ERROR: Failed to unmarshal item (table=%s): %s", table, err)
-			return nil, err
-		}
-		if !item.IsDeleted() {
-			results[item.GetKey()] = item
-		}
-	}
-
-	return results, nil
-}
-
-func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
-	for kind, items := range allData {
-		table := store.tableName(kind.GetNamespace())
-
-		if err := store.truncate(kind); err != nil {
-			store.Logger.Printf("ERROR: Failed to delete all items (table=%s): %s", table, err)
-			return err
-		}
-
-		for k, v := range items {
-			av, err := dynamodbattribute.MarshalMap(v)
-			if err != nil {
-				store.Logger.Printf("ERROR: Failed to marshal item (key=%s table=%s): %s", k, table, err)
-				return err
-			}
-			_, err = store.Client.PutItem(&dynamodb.PutItemInput{
-				TableName: aws.String(table),
-				Item:      av,
-			})
-			if err != nil {
-				store.Logger.Printf("ERROR: Failed to put item (key=%s table=%s): %s", k, table, err)
-				return err
-			}
-		}
-	}
-	store.initialized = true
-	return nil
+func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.VersionedData) error {
+	return store.updateWithVersioning(kind, item)
 }
 
 func (store *DynamoDBFeatureStore) Delete(kind ld.VersionedDataKind, key string, version int) error {
 	deletedItem := kind.MakeDeletedItem(key, version)
 	return store.updateWithVersioning(kind, deletedItem)
-}
-
-func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.VersionedData) error {
-	return store.updateWithVersioning(kind, item)
-}
-
-func (store *DynamoDBFeatureStore) Initialized() bool {
-	return store.initialized
-}
-
-func (store *DynamoDBFeatureStore) tableName(namespace string) string {
-	return store.TablePrefix + namespace
 }
 
 func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKind, item ld.VersionedData) error {
@@ -220,6 +218,10 @@ func (store *DynamoDBFeatureStore) truncate(kind ld.VersionedDataKind) error {
 	}
 
 	return nil
+}
+
+func (store *DynamoDBFeatureStore) tableName(namespace string) string {
+	return store.TablePrefix + namespace
 }
 
 func unmarshalItem(kind ld.VersionedDataKind, item map[string]*dynamodb.AttributeValue) (ld.VersionedData, error) {
