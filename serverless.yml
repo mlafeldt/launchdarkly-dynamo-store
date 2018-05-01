@@ -17,7 +17,7 @@ provider:
             - SegmentsTable
             - Arn
   environment:
-    DYNAMODB_TABLE_PREFIX: ${self:service}
+    DYNAMODB_TABLE_PREFIX: ${self:service}-
     LAUNCHDARKLY_SDK_KEY: ${env:LAUNCHDARKLY_SDK_KEY}
 
 package:

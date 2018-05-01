@@ -149,7 +149,7 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 }
 
 func (store *DynamoDBFeatureStore) tableName(namespace string) string {
-	return store.TablePrefix + "-" + namespace
+	return store.TablePrefix + namespace
 }
 
 func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKind, item ld.VersionedData) error {
