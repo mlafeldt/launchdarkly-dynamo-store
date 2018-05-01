@@ -48,9 +48,9 @@ func NewDynamoDBFeatureStore(tablePrefix string, logger ld.Logger) (*DynamoDBFea
 
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
 	for kind, items := range allData {
-		table := store.tableName(kind.GetNamespace())
+		table := store.tableName(kind)
 
-		if err := store.truncate(kind); err != nil {
+		if err := store.truncateTable(kind); err != nil {
 			store.Logger.Printf("ERROR: Failed to delete all items (table=%s): %s", table, err)
 			return err
 		}
@@ -82,7 +82,7 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 }
 
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
-	table := store.tableName(kind.GetNamespace())
+	table := store.tableName(kind)
 	var items []map[string]*dynamodb.AttributeValue
 
 	err := store.Client.ScanPages(&dynamodb.ScanInput{
@@ -113,7 +113,7 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 }
 
 func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (ld.VersionedData, error) {
-	table := store.tableName(kind.GetNamespace())
+	table := store.tableName(kind)
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(table),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -156,7 +156,7 @@ func (store *DynamoDBFeatureStore) Delete(kind ld.VersionedDataKind, key string,
 }
 
 func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKind, item ld.VersionedData) error {
-	table := store.tableName(kind.GetNamespace())
+	table := store.tableName(kind)
 
 	av, err := dynamodbattribute.MarshalMap(item)
 	if err != nil {
@@ -187,8 +187,8 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 }
 
 // FIXME: use BatchWriteItem etc. to speed this up
-func (store *DynamoDBFeatureStore) truncate(kind ld.VersionedDataKind) error {
-	table := store.tableName(kind.GetNamespace())
+func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) error {
+	table := store.tableName(kind)
 
 	var items []map[string]*dynamodb.AttributeValue
 
@@ -225,8 +225,8 @@ func (store *DynamoDBFeatureStore) truncate(kind ld.VersionedDataKind) error {
 	return nil
 }
 
-func (store *DynamoDBFeatureStore) tableName(namespace string) string {
-	return store.TablePrefix + namespace
+func (store *DynamoDBFeatureStore) tableName(kind ld.VersionedDataKind) string {
+	return store.TablePrefix + kind.GetNamespace()
 }
 
 func unmarshalItem(kind ld.VersionedDataKind, item map[string]*dynamodb.AttributeValue) (ld.VersionedData, error) {
