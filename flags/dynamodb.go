@@ -16,6 +16,9 @@ import (
 
 const PrimaryPartitionKey = "key"
 
+// Verify that the store satisfies the FeatureStore interface
+var _ ld.FeatureStore = (*DynamoDBFeatureStore)(nil)
+
 type DynamoDBFeatureStore struct {
 	Client      *dynamodb.DynamoDB
 	TablePrefix string
