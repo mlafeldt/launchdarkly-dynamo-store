@@ -45,8 +45,8 @@
     "service/dynamodb/dynamodbattribute",
     "service/sts"
   ]
-  revision = "64aa9485bf77b8a811e88e95060a4a049bb373fb"
-  version = "v1.13.37"
+  revision = "236a3fce423171d03ae327a8aa2512e6fb24df36"
+  version = "v1.13.39"
 
 [[projects]]
   name = "github.com/blang/semver"
@@ -102,17 +102,17 @@
   version = "v1.2.1"
 
 [[projects]]
+  branch = "v3"
   name = "gopkg.in/launchdarkly/go-client.v3"
   packages = [
     ".",
     "shared_test"
   ]
-  revision = "bbb4da333e689b54d411065a796032c55fa0537f"
-  version = "3.1.0"
+  revision = "f6654818e3e84e840c7a3191e54ed9c4762217f0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9858221a8f9d1d4395647b496055d80b6c876bb9f5ac97793926fa98a2fa3b7c"
+  inputs-digest = "6898a3e2285b10238060189b3a7feaa4e21abd7fd360ef8f27583cd89dea9909"
   solver-name = "gps-cdcl"
   solver-version = 1
