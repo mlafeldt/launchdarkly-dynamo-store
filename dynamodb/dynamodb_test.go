@@ -16,7 +16,7 @@ type StoreBuilder struct {
 }
 
 func (builder *StoreBuilder) Build() ld.FeatureStore {
-	store, err := dynamodb.NewDynamoDBFeatureStore(builder.tablePrefix)
+	store, err := dynamodb.NewDynamoDBFeatureStore(builder.tablePrefix, nil)
 	if err != nil {
 		builder.t.Fatal(err)
 	}

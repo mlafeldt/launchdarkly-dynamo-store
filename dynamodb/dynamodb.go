@@ -27,8 +27,10 @@ type DynamoDBFeatureStore struct {
 	initialized bool
 }
 
-func NewDynamoDBFeatureStore(tablePrefix string) (*DynamoDBFeatureStore, error) {
-	logger := log.New(os.Stderr, "[LaunchDarkly DynamoDBFeatureStore]", log.LstdFlags)
+func NewDynamoDBFeatureStore(tablePrefix string, logger ld.Logger) (*DynamoDBFeatureStore, error) {
+	if logger == nil {
+		logger = log.New(os.Stderr, "[LaunchDarkly DynamoDBFeatureStore]", log.LstdFlags)
+	}
 
 	sess, err := session.NewSession()
 	if err != nil {

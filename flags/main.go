@@ -23,7 +23,7 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	// TODO: verify signature
 	log.Printf("Webhook payload signature = %s", req.Headers["X-Ld-Signature"])
 
-	store, err := dynamodb.NewDynamoDBFeatureStore(os.Getenv("DYNAMODB_TABLE_PREFIX"))
+	store, err := dynamodb.NewDynamoDBFeatureStore(os.Getenv("DYNAMODB_TABLE_PREFIX"), nil)
 	if err != nil {
 		log.Printf("Failed to initialize DynamoDBFeatureStore: %s", err)
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, nil
