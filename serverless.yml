@@ -17,7 +17,7 @@ provider:
             - SegmentsTable
             - Arn
   environment:
-    DYNAMODB_TABLE_PREFIX: ${self:service}-
+    DYNAMODB_TABLE_PREFIX: launchdarkly-${self:provider.stage}-
     LAUNCHDARKLY_SDK_KEY: ${env:LAUNCHDARKLY_SDK_KEY}
 
 package:
@@ -39,7 +39,7 @@ resources:
     FeaturesTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-features
+        TableName: launchdarkly-${self:provider.stage}-features
         AttributeDefinitions:
           - AttributeName: key
             AttributeType: S
@@ -52,7 +52,7 @@ resources:
     SegmentsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-segments
+        TableName: launchdarkly-${self:provider.stage}-segments
         AttributeDefinitions:
           - AttributeName: key
             AttributeType: S
