@@ -2,11 +2,13 @@
 Package dynamodb provides a DynamoDB-backed feature store for the LaunchDarkly
 Go SDK.
 
-By caching feature flag data in DynamoDB, it's possible to avoid calling out to
-LaunchDarkly every time a client is created. This is useful for environments
-like AWS Lambda that are highly concurrent and sensitive to cold starts.
+By caching feature flag data in DynamoDB, LaunchDarkly clients don't need to
+call out to the LaunchDarkly API every time they're created. This is useful for
+environments like AWS Lambda where workloads can be sensitive to cold starts.
 
-See https://blog.launchdarkly.com/go-serveless-not-flagless-implementing-feature-flags-in-serverless-environments/
+In contrast to the Redis-backed feature store, the DynamoDB store can be used
+without requiring access to any VPC resources, i.e. ElastiCache Redis. See
+https://blog.launchdarkly.com/go-serveless-not-flagless-implementing-feature-flags-in-serverless-environments/
 for more background information.
 
 Here's how to use the feature store with the LaunchDarkly client:
@@ -52,19 +54,27 @@ var _ ld.FeatureStore = (*DynamoDBFeatureStore)(nil)
 
 // DynamoDBFeatureStore provides a DynamoDB-backed feature store for LaunchDarkly.
 type DynamoDBFeatureStore struct {
-	Client      *dynamodb.DynamoDB
+	// Client used to access DynamoDB
+	Client *dynamodb.DynamoDB
+
+	// Prefix added to the beginning of the name of each DynamoDB table
+	// used by the store
 	TablePrefix string
-	Logger      ld.Logger
+
+	// All log messages will be written to this Logger
+	Logger ld.Logger
 
 	initialized bool
 }
 
-// NewDynamoDBFeatureStore creates a new DynamoDB feature store ready to be
-// used by the LaunchDarkly client.
+// NewDynamoDBFeatureStore creates a new DynamoDB feature store ready to be used
+// by the LaunchDarkly client.
 //
-// Access to DynamoDB is configured via the environment variables
-// AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION. For more control,
-// compose your own DynamoDBFeatureStore with a custom Client.
+// This function uses https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#NewSession
+// to configure access to DynamoDB, which means that environment variables like
+// AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION work as expected.
+//
+// For more control, compose your own DynamoDBFeatureStore with a custom DynamoDB client.
 func NewDynamoDBFeatureStore(tablePrefix string, logger ld.Logger) (*DynamoDBFeatureStore, error) {
 	if logger == nil {
 		logger = log.New(os.Stderr, "[LaunchDarkly DynamoDBFeatureStore]", log.LstdFlags)
@@ -84,9 +94,9 @@ func NewDynamoDBFeatureStore(tablePrefix string, logger ld.Logger) (*DynamoDBFea
 	}, nil
 }
 
-// Init initializes the store by fetching feature flags and other items from
-// LaunchDarkly and writing them to the corresponding table in DynamoDB. All
-// existing items will be deleted prior to storing new data.
+// Init initializes the store by writing the given data to DynamoDB, using a
+// separate table for each data kind (e.g. one table for flags and another one
+// for segments). It will delete all existing data from the tables.
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
 	for kind, items := range allData {
 		table := store.tableName(kind)
@@ -123,7 +133,8 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 	return store.initialized
 }
 
-// All returns all items currently stored in DynamoDB.
+// All returns all items currently stored in DynamoDB that are of the given
+// data kind. It won't return items marked as deleted.
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
 	table := store.tableName(kind)
 	var items []map[string]*dynamodb.AttributeValue
@@ -155,7 +166,8 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 	return results, nil
 }
 
-// Get returns a specific item matching the given key.
+// Get returns a specific item with the given key. It returns nil if the item
+// does not exist or if it's marked as deleted.
 func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (ld.VersionedData, error) {
 	table := store.tableName(kind)
 	input := &dynamodb.GetItemInput{
@@ -190,14 +202,15 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 	return item, nil
 }
 
-// Upsert either creates a new item if it doesn't already exist, or updates an
-// existing item if the passed item has a higher version.
+// Upsert either creates a new item of the given data kind if it doesn't
+// already exist, or updates an existing item if the given item has a higher
+// version.
 func (store *DynamoDBFeatureStore) Upsert(kind ld.VersionedDataKind, item ld.VersionedData) error {
 	return store.updateWithVersioning(kind, item)
 }
 
-// Delete marks an item as deleted. (It won't actually remove the item from the
-// store.)
+// Delete marks an item as deleted. (It won't actually remove the item from
+// DynamoDB.)
 func (store *DynamoDBFeatureStore) Delete(kind ld.VersionedDataKind, key string, version int) error {
 	deletedItem := kind.MakeDeletedItem(key, version)
 	return store.updateWithVersioning(kind, deletedItem)
