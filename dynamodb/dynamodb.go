@@ -101,6 +101,7 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 	for kind, items := range allData {
 		table := store.tableName(kind)
 
+		// FIXME: deleting all items before storing new ones is racy
 		if err := store.truncateTable(kind); err != nil {
 			store.Logger.Printf("ERROR: Failed to delete all items (table=%s): %s", table, err)
 			return err
@@ -121,6 +122,8 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 				return err
 			}
 		}
+
+		store.Logger.Printf("INFO: Initialized DynamoDB table with %d items (table=%s)", len(items), table)
 	}
 
 	store.initialized = true
@@ -146,7 +149,7 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 		return !lastPage
 	})
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to scan pages (table=%s): %s", table, err)
+		store.Logger.Printf("ERROR: Failed to get all items (table=%s): %s", table, err)
 		return nil, err
 	}
 
@@ -170,21 +173,19 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 // does not exist or if it's marked as deleted.
 func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (ld.VersionedData, error) {
 	table := store.tableName(kind)
-	input := &dynamodb.GetItemInput{
+	result, err := store.Client.GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String(table),
 		Key: map[string]*dynamodb.AttributeValue{
 			primaryPartitionKey: {S: aws.String(key)},
 		},
-	}
-
-	result, err := store.Client.GetItem(input)
+	})
 	if err != nil {
 		store.Logger.Printf("ERROR: Failed to get item (key=%s table=%s): %s", key, table, err)
 		return nil, err
 	}
 
 	if len(result.Item) == 0 {
-		store.Logger.Printf("WARN: Item not found (key=%s table=%s)", key, table)
+		store.Logger.Printf("DEBUG: Item not found (key=%s table=%s)", key, table)
 		return nil, nil
 	}
 
@@ -195,7 +196,7 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 	}
 
 	if item.IsDeleted() {
-		store.Logger.Printf("WARN: Attempted to get deleted item (key=%s table=%s)", key, table)
+		store.Logger.Printf("DEBUG: Attempted to get deleted item (key=%s table=%s)", key, table)
 		return nil, nil
 	}
 
@@ -238,6 +239,8 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == dynamodb.ErrCodeConditionalCheckFailedException {
+			store.Logger.Printf("DEBUG: Not updating item due to condition (key=%s version=%d table=%s)",
+				item.GetKey(), item.GetVersion(), table)
 			return nil
 		}
 		store.Logger.Printf("ERROR: Failed to put item (key=%s table=%s): %s", item.GetKey(), table, err)
@@ -260,7 +263,7 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 		return !lastPage
 	})
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to scan pages (table=%s): %s", table, err)
+		store.Logger.Printf("ERROR: Failed to get all items (table=%s): %s", table, err)
 		return err
 	}
 
