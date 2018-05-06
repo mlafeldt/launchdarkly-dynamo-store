@@ -47,8 +47,8 @@ resources:
           - AttributeName: key
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
     SegmentsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -60,5 +60,5 @@ resources:
           - AttributeName: key
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
