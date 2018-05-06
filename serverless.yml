@@ -8,7 +8,10 @@ provider:
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - dynamodb:*
+        - dynamodb:BatchWriteItem
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:Scan
       Resource:
         - Fn::GetAtt:
             - FeaturesTable
