@@ -143,7 +143,8 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 	var items []map[string]*dynamodb.AttributeValue
 
 	err := store.Client.ScanPages(&dynamodb.ScanInput{
-		TableName: aws.String(table),
+		TableName:      aws.String(table),
+		ConsistentRead: aws.Bool(true),
 	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
 		items = append(items, out.Items...)
 		return !lastPage
@@ -174,7 +175,8 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (ld.VersionedData, error) {
 	table := store.tableName(kind)
 	result, err := store.Client.GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String(table),
+		TableName:      aws.String(table),
+		ConsistentRead: aws.Bool(true),
 		Key: map[string]*dynamodb.AttributeValue{
 			primaryPartitionKey: {S: aws.String(key)},
 		},
@@ -257,7 +259,8 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 	var items []map[string]*dynamodb.AttributeValue
 
 	err := store.Client.ScanPages(&dynamodb.ScanInput{
-		TableName: aws.String(table),
+		TableName:      aws.String(table),
+		ConsistentRead: aws.Bool(true),
 	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
 		items = append(items, out.Items...)
 		return !lastPage
