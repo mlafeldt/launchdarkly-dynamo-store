@@ -36,6 +36,7 @@ package dynamodb
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 
@@ -107,23 +108,25 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 			return err
 		}
 
+		var requests []*dynamodb.WriteRequest
+
 		for k, v := range items {
 			av, err := dynamodbattribute.MarshalMap(v)
 			if err != nil {
 				store.Logger.Printf("ERROR: Failed to marshal item (key=%s table=%s): %s", k, table, err)
 				return err
 			}
-			_, err = store.Client.PutItem(&dynamodb.PutItemInput{
-				TableName: aws.String(table),
-				Item:      av,
+			requests = append(requests, &dynamodb.WriteRequest{
+				PutRequest: &dynamodb.PutRequest{Item: av},
 			})
-			if err != nil {
-				store.Logger.Printf("ERROR: Failed to put item (key=%s table=%s): %s", k, table, err)
-				return err
-			}
 		}
 
-		store.Logger.Printf("INFO: Initialized DynamoDB table with %d items (table=%s)", len(items), table)
+		if err := store.batchWriteRequests(table, requests); err != nil {
+			store.Logger.Printf("ERROR: Failed to write %d items in batches (table=%s): %s", len(items), table, err)
+			return err
+		}
+
+		store.Logger.Printf("INFO: Initialized table with %d items (table=%s)", len(items), table)
 	}
 
 	store.initialized = true
@@ -252,7 +255,6 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 	return nil
 }
 
-// FIXME: use BatchWriteItem etc. to speed this up
 func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) error {
 	table := store.tableName(kind)
 
@@ -270,25 +272,47 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 		return err
 	}
 
-	for _, i := range items {
-		item, err := unmarshalItem(kind, i)
+	var requests []*dynamodb.WriteRequest
+
+	for _, v := range items {
+		item, err := unmarshalItem(kind, v)
 		if err != nil {
 			store.Logger.Printf("ERROR: Failed to unmarshal item (table=%s): %s", table, err)
 			return err
 		}
 
-		_, err = store.Client.DeleteItem(&dynamodb.DeleteItemInput{
-			TableName: aws.String(table),
-			Key: map[string]*dynamodb.AttributeValue{
-				primaryPartitionKey: {S: aws.String(item.GetKey())},
+		requests = append(requests, &dynamodb.WriteRequest{
+			DeleteRequest: &dynamodb.DeleteRequest{
+				Key: map[string]*dynamodb.AttributeValue{
+					primaryPartitionKey: {S: aws.String(item.GetKey())},
+				},
 			},
 		})
+	}
+
+	if err := store.batchWriteRequests(table, requests); err != nil {
+		store.Logger.Printf("ERROR: Failed to delete %d items in batches (table=%s): %s", len(items), table, err)
+		return err
+	}
+
+	return nil
+}
+
+// batchWriteRequests executes a list of write requests (PutItem or DeleteItem)
+// in batches of 25.
+func (store *DynamoDBFeatureStore) batchWriteRequests(tableName string, requests []*dynamodb.WriteRequest) error {
+	for len(requests) > 0 {
+		batchSize := int(math.Min(float64(len(requests)), 25))
+		batch := requests[:batchSize]
+		requests = requests[batchSize:]
+
+		_, err := store.Client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
+			RequestItems: map[string][]*dynamodb.WriteRequest{tableName: batch},
+		})
 		if err != nil {
-			store.Logger.Printf("ERROR: Failed to delete item (key=%s table=%s): %s", item.GetKey(), table, err)
 			return err
 		}
 	}
-
 	return nil
 }
 
