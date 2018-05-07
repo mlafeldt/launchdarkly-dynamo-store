@@ -45,8 +45,8 @@
     "service/dynamodb/dynamodbattribute",
     "service/sts"
   ]
-  revision = "236a3fce423171d03ae327a8aa2512e6fb24df36"
-  version = "v1.13.39"
+  revision = "4f5d298bd2dcb34b06d944594f458d1f77ac4d66"
+  version = "v1.13.42"
 
 [[projects]]
   name = "github.com/blang/semver"
@@ -108,7 +108,7 @@
     ".",
     "shared_test"
   ]
-  revision = "f6654818e3e84e840c7a3191e54ed9c4762217f0"
+  revision = "d0de2f6940814672dc1e37839eac44d50d5e9801"
 
 [solve-meta]
   analyzer-name = "dep"
