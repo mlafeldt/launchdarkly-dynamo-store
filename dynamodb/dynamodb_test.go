@@ -10,6 +10,8 @@ import (
 	"github.com/mlafeldt/serverless-ldr/dynamodb"
 )
 
+// StoreBuilder allows us to access the testing context from within the
+// function passed to RunFeatureStoreTests.
 type StoreBuilder struct {
 	t           *testing.T
 	tablePrefix string
