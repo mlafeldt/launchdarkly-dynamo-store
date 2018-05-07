@@ -18,10 +18,14 @@ func main() {
 }
 
 func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	log.Printf("Webhook payload = %s", req.Body)
-
-	// TODO: verify signature
-	log.Printf("Webhook payload signature = %s", req.Headers["X-Ld-Signature"])
+	for _, h := range []string{
+		"User-Agent",
+		"X-Forwarded-For",
+		"X-Amzn-Trace-Id",
+		"X-Ld-Signature", // LaunchDarkly HMAC SHA256 hex digest of webhook payload
+	} {
+		log.Printf("%s: %s", h, req.Headers[h])
+	}
 
 	store, err := dynamodb.NewDynamoDBFeatureStore(os.Getenv("DYNAMODB_TABLE_PREFIX"), nil)
 	if err != nil {
@@ -39,6 +43,5 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	}
 	defer ldClient.Close()
 
-	log.Print("Successfully updated feature store!")
 	return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 }
