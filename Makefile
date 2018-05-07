@@ -1,5 +1,5 @@
 ENV     = staging
-FUNCS   = flags
+FUNCS   = store
 SERVICE = $(shell awk '/^service:/ {print $$2}' serverless.yml)
 
 staging: ENV=staging
