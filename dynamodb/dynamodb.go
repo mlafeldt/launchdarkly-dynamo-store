@@ -140,18 +140,11 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 }
 
 // All returns all items currently stored in DynamoDB that are of the given
-// data kind. It won't return items marked as deleted.
+// data kind. (It won't return items marked as deleted.)
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
 	table := store.tableName(kind)
-	var items []map[string]*dynamodb.AttributeValue
 
-	err := store.Client.ScanPages(&dynamodb.ScanInput{
-		TableName:      aws.String(table),
-		ConsistentRead: aws.Bool(true),
-	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
-		items = append(items, out.Items...)
-		return !lastPage
-	})
+	items, err := store.allItems(table)
 	if err != nil {
 		store.Logger.Printf("ERROR: Failed to get all items (table=%s): %s", table, err)
 		return nil, err
@@ -258,15 +251,7 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) error {
 	table := store.tableName(kind)
 
-	var items []map[string]*dynamodb.AttributeValue
-
-	err := store.Client.ScanPages(&dynamodb.ScanInput{
-		TableName:      aws.String(table),
-		ConsistentRead: aws.Bool(true),
-	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
-		items = append(items, out.Items...)
-		return !lastPage
-	})
+	items, err := store.allItems(table)
 	if err != nil {
 		store.Logger.Printf("ERROR: Failed to get all items (table=%s): %s", table, err)
 		return err
@@ -298,16 +283,35 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 	return nil
 }
 
+// allItems returns all items stored in a table.
+func (store *DynamoDBFeatureStore) allItems(table string) ([]map[string]*dynamodb.AttributeValue, error) {
+	var items []map[string]*dynamodb.AttributeValue
+
+	err := store.Client.ScanPages(&dynamodb.ScanInput{
+		TableName:      aws.String(table),
+		ConsistentRead: aws.Bool(true),
+	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
+		items = append(items, out.Items...)
+		return !lastPage
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
 // batchWriteRequests executes a list of write requests (PutItem or DeleteItem)
-// in batches of 25.
-func (store *DynamoDBFeatureStore) batchWriteRequests(tableName string, requests []*dynamodb.WriteRequest) error {
+// in batches of 25, which is the maximum BatchWriteItem can handle.
+func (store *DynamoDBFeatureStore) batchWriteRequests(table string, requests []*dynamodb.WriteRequest) error {
 	for len(requests) > 0 {
 		batchSize := int(math.Min(float64(len(requests)), 25))
 		batch := requests[:batchSize]
 		requests = requests[batchSize:]
 
 		_, err := store.Client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-			RequestItems: map[string][]*dynamodb.WriteRequest{tableName: batch},
+			RequestItems: map[string][]*dynamodb.WriteRequest{table: batch},
 		})
 		if err != nil {
 			return err
