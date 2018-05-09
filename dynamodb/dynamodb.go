@@ -13,7 +13,7 @@ for more background information.
 
 Here's how to use the feature store with the LaunchDarkly client:
 
-	store, err := dynamodb.NewDynamoDBFeatureStore("some-table-", nil)
+	store, err := dynamodb.NewDynamoDBFeatureStore("some-table", nil)
 	if err != nil { ... }
 
 	config := ld.DefaultConfig
@@ -21,15 +21,6 @@ Here's how to use the feature store with the LaunchDarkly client:
 
 	ldClient, err := ld.MakeCustomClient("SOME_SDK_KEY", config, 5*time.Second)
 	if err != nil { ... }
-
-The DynamoDB tables used by the store must adhere to this simple schema:
-
-        AttributeDefinitions:
-          - AttributeName: key
-            AttributeType: S
-        KeySchema:
-          - AttributeName: key
-            KeyType: HASH
 */
 package dynamodb
 
@@ -48,21 +39,24 @@ import (
 	ld "gopkg.in/launchdarkly/go-client.v3"
 )
 
-const primaryPartitionKey = "key"
+const (
+	// Schema of the DynamoDB table
+	tablePartitionKey = "key"
+	tableSortKey      = "namespace"
+)
 
 // Verify that the store satisfies the FeatureStore interface
 var _ ld.FeatureStore = (*DynamoDBFeatureStore)(nil)
 
 // DynamoDBFeatureStore provides a DynamoDB-backed feature store for LaunchDarkly.
 type DynamoDBFeatureStore struct {
-	// Client used to access DynamoDB
+	// Client to access DynamoDB
 	Client *dynamodb.DynamoDB
 
-	// Prefix added to the beginning of the name of each DynamoDB table
-	// used by the store
-	TablePrefix string
+	// Name of the DynamoDB table
+	Table string
 
-	// All log messages will be written to this Logger
+	// Logger to write all log messages to
 	Logger ld.Logger
 
 	initialized bool
@@ -76,7 +70,7 @@ type DynamoDBFeatureStore struct {
 // AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION work as expected.
 //
 // For more control, compose your own DynamoDBFeatureStore with a custom DynamoDB client.
-func NewDynamoDBFeatureStore(tablePrefix string, logger ld.Logger) (*DynamoDBFeatureStore, error) {
+func NewDynamoDBFeatureStore(table string, logger ld.Logger) (*DynamoDBFeatureStore, error) {
 	if logger == nil {
 		logger = log.New(os.Stderr, "[LaunchDarkly DynamoDBFeatureStore]", log.LstdFlags)
 	}
@@ -89,45 +83,44 @@ func NewDynamoDBFeatureStore(tablePrefix string, logger ld.Logger) (*DynamoDBFea
 
 	return &DynamoDBFeatureStore{
 		Client:      client,
-		TablePrefix: tablePrefix,
+		Table:       table,
 		Logger:      logger,
 		initialized: false,
 	}, nil
 }
 
-// Init initializes the store by writing the given data to DynamoDB, using a
-// separate table for each data kind (e.g. one table for flags and another one
-// for segments). It will delete all existing data from the tables.
+// Init initializes the store by writing the given data to DynamoDB. It will
+// delete all existing data from the table.
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
-	for kind, items := range allData {
-		table := store.tableName(kind)
+	store.Logger.Printf("INFO: Initializing table %s...", store.Table)
 
-		// FIXME: deleting all items before storing new ones is racy
+	var requests []*dynamodb.WriteRequest
+
+	for kind, items := range allData {
+		// FIXME!
 		if err := store.truncateTable(kind); err != nil {
-			store.Logger.Printf("ERROR: Failed to delete all items (table=%s): %s", table, err)
+			store.Logger.Printf("ERROR: Failed to delete all items: %s", err)
 			return err
 		}
 
-		var requests []*dynamodb.WriteRequest
-
 		for k, v := range items {
-			av, err := dynamodbattribute.MarshalMap(v)
+			av, err := marshalItem(kind, v)
 			if err != nil {
-				store.Logger.Printf("ERROR: Failed to marshal item (key=%s table=%s): %s", k, table, err)
+				store.Logger.Printf("ERROR: Failed to marshal item (key=%s): %s", k, err)
 				return err
 			}
 			requests = append(requests, &dynamodb.WriteRequest{
 				PutRequest: &dynamodb.PutRequest{Item: av},
 			})
 		}
-
-		if err := store.batchWriteRequests(table, requests); err != nil {
-			store.Logger.Printf("ERROR: Failed to write %d items in batches (table=%s): %s", len(items), table, err)
-			return err
-		}
-
-		store.Logger.Printf("INFO: Initialized table with %d items (table=%s)", len(items), table)
 	}
+
+	if err := store.batchWriteRequests(requests); err != nil {
+		store.Logger.Printf("ERROR: Failed to write %d items in batches: %s", len(requests), err)
+		return err
+	}
+
+	store.Logger.Printf("DEBUG: Initialized table with %d items", len(requests))
 
 	store.initialized = true
 
@@ -142,11 +135,9 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 // All returns all items currently stored in DynamoDB that are of the given
 // data kind. (It won't return items marked as deleted.)
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
-	table := store.tableName(kind)
-
-	items, err := store.allItems(table)
+	items, err := store.allItems()
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to get all items (table=%s): %s", table, err)
+		store.Logger.Printf("ERROR: Failed to get all items: %s", err)
 		return nil, err
 	}
 
@@ -155,7 +146,7 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 	for _, i := range items {
 		item, err := unmarshalItem(kind, i)
 		if err != nil {
-			store.Logger.Printf("ERROR: Failed to unmarshal item (table=%s): %s", table, err)
+			store.Logger.Printf("ERROR: Failed to unmarshal item: %s", err)
 			return nil, err
 		}
 		if !item.IsDeleted() {
@@ -169,32 +160,32 @@ func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld
 // Get returns a specific item with the given key. It returns nil if the item
 // does not exist or if it's marked as deleted.
 func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (ld.VersionedData, error) {
-	table := store.tableName(kind)
 	result, err := store.Client.GetItem(&dynamodb.GetItemInput{
-		TableName:      aws.String(table),
+		TableName:      aws.String(store.Table),
 		ConsistentRead: aws.Bool(true),
 		Key: map[string]*dynamodb.AttributeValue{
-			primaryPartitionKey: {S: aws.String(key)},
+			tablePartitionKey: {S: aws.String(key)},
+			tableSortKey:      {S: aws.String(kind.GetNamespace())},
 		},
 	})
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to get item (key=%s table=%s): %s", key, table, err)
+		store.Logger.Printf("ERROR: Failed to get item (key=%s): %s", key, err)
 		return nil, err
 	}
 
 	if len(result.Item) == 0 {
-		store.Logger.Printf("DEBUG: Item not found (key=%s table=%s)", key, table)
+		store.Logger.Printf("DEBUG: Item not found (key=%s)", key)
 		return nil, nil
 	}
 
 	item, err := unmarshalItem(kind, result.Item)
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to unmarshal item (key=%s table=%s): %s", key, table, err)
+		store.Logger.Printf("ERROR: Failed to unmarshal item (key=%s): %s", key, err)
 		return nil, err
 	}
 
 	if item.IsDeleted() {
-		store.Logger.Printf("DEBUG: Attempted to get deleted item (key=%s table=%s)", key, table)
+		store.Logger.Printf("DEBUG: Attempted to get deleted item (key=%s)", key)
 		return nil, nil
 	}
 
@@ -216,19 +207,18 @@ func (store *DynamoDBFeatureStore) Delete(kind ld.VersionedDataKind, key string,
 }
 
 func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKind, item ld.VersionedData) error {
-	table := store.tableName(kind)
-
-	av, err := dynamodbattribute.MarshalMap(item)
+	av, err := marshalItem(kind, item)
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to marshal item (key=%s table=%s): %s", item.GetKey(), table, err)
+		store.Logger.Printf("ERROR: Failed to marshal item (key=%s): %s", item.GetKey(), err)
 		return err
 	}
+
 	_, err = store.Client.PutItem(&dynamodb.PutItemInput{
-		TableName:           aws.String(table),
+		TableName:           aws.String(store.Table),
 		Item:                av,
 		ConditionExpression: aws.String("attribute_not_exists(#key) or :version > #version"),
 		ExpressionAttributeNames: map[string]*string{
-			"#key":     aws.String(primaryPartitionKey),
+			"#key":     aws.String(tablePartitionKey),
 			"#version": aws.String("version"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
@@ -237,11 +227,11 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == dynamodb.ErrCodeConditionalCheckFailedException {
-			store.Logger.Printf("DEBUG: Not updating item due to condition (key=%s version=%d table=%s)",
-				item.GetKey(), item.GetVersion(), table)
+			store.Logger.Printf("DEBUG: Not updating item due to condition (key=%s version=%d)",
+				item.GetKey(), item.GetVersion())
 			return nil
 		}
-		store.Logger.Printf("ERROR: Failed to put item (key=%s table=%s): %s", item.GetKey(), table, err)
+		store.Logger.Printf("ERROR: Failed to put item (key=%s): %s", item.GetKey(), err)
 		return err
 	}
 
@@ -249,11 +239,9 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 }
 
 func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) error {
-	table := store.tableName(kind)
-
-	items, err := store.allItems(table)
+	items, err := store.allItems()
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to get all items (table=%s): %s", table, err)
+		store.Logger.Printf("ERROR: Failed to get all items: %s", err)
 		return err
 	}
 
@@ -262,21 +250,22 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 	for _, v := range items {
 		item, err := unmarshalItem(kind, v)
 		if err != nil {
-			store.Logger.Printf("ERROR: Failed to unmarshal item (table=%s): %s", table, err)
+			store.Logger.Printf("ERROR: Failed to unmarshal item: %s", err)
 			return err
 		}
 
 		requests = append(requests, &dynamodb.WriteRequest{
 			DeleteRequest: &dynamodb.DeleteRequest{
 				Key: map[string]*dynamodb.AttributeValue{
-					primaryPartitionKey: {S: aws.String(item.GetKey())},
+					tablePartitionKey: {S: aws.String(item.GetKey())},
+					tableSortKey:      {S: aws.String(kind.GetNamespace())},
 				},
 			},
 		})
 	}
 
-	if err := store.batchWriteRequests(table, requests); err != nil {
-		store.Logger.Printf("ERROR: Failed to delete %d items in batches (table=%s): %s", len(items), table, err)
+	if err := store.batchWriteRequests(requests); err != nil {
+		store.Logger.Printf("ERROR: Failed to delete %d items in batches: %s", len(items), err)
 		return err
 	}
 
@@ -284,11 +273,11 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 }
 
 // allItems returns all items stored in a table.
-func (store *DynamoDBFeatureStore) allItems(table string) ([]map[string]*dynamodb.AttributeValue, error) {
+func (store *DynamoDBFeatureStore) allItems() ([]map[string]*dynamodb.AttributeValue, error) {
 	var items []map[string]*dynamodb.AttributeValue
 
 	err := store.Client.ScanPages(&dynamodb.ScanInput{
-		TableName:      aws.String(table),
+		TableName:      aws.String(store.Table),
 		ConsistentRead: aws.Bool(true),
 	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
 		items = append(items, out.Items...)
@@ -304,14 +293,14 @@ func (store *DynamoDBFeatureStore) allItems(table string) ([]map[string]*dynamod
 
 // batchWriteRequests executes a list of write requests (PutItem or DeleteItem)
 // in batches of 25, which is the maximum BatchWriteItem can handle.
-func (store *DynamoDBFeatureStore) batchWriteRequests(table string, requests []*dynamodb.WriteRequest) error {
+func (store *DynamoDBFeatureStore) batchWriteRequests(requests []*dynamodb.WriteRequest) error {
 	for len(requests) > 0 {
 		batchSize := int(math.Min(float64(len(requests)), 25))
 		batch := requests[:batchSize]
 		requests = requests[batchSize:]
 
 		_, err := store.Client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-			RequestItems: map[string][]*dynamodb.WriteRequest{table: batch},
+			RequestItems: map[string][]*dynamodb.WriteRequest{store.Table: batch},
 		})
 		if err != nil {
 			return err
@@ -320,8 +309,18 @@ func (store *DynamoDBFeatureStore) batchWriteRequests(table string, requests []*
 	return nil
 }
 
-func (store *DynamoDBFeatureStore) tableName(kind ld.VersionedDataKind) string {
-	return store.TablePrefix + kind.GetNamespace()
+func marshalItem(kind ld.VersionedDataKind, item ld.VersionedData) (map[string]*dynamodb.AttributeValue, error) {
+	av, err := dynamodbattribute.MarshalMap(item)
+	if err != nil {
+		return nil, err
+	}
+
+	// Adding the namespace to the attributes allows us to store everything
+	// (feature flags, segments, etc.) in a single DynamoDB table. The
+	// namespace attribute will be ignored when unmarshalling.
+	av[tableSortKey] = &dynamodb.AttributeValue{S: aws.String(kind.GetNamespace())}
+
+	return av, nil
 }
 
 func unmarshalItem(kind ld.VersionedDataKind, item map[string]*dynamodb.AttributeValue) (ld.VersionedData, error) {

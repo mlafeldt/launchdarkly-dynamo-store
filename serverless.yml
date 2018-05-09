@@ -14,13 +14,10 @@ provider:
         - dynamodb:Scan
       Resource:
         - Fn::GetAtt:
-            - FeaturesTable
-            - Arn
-        - Fn::GetAtt:
-            - SegmentsTable
+            - DynamoDBTable
             - Arn
   environment:
-    DYNAMODB_TABLE_PREFIX: launchdarkly-${self:provider.stage}-
+    LAUNCHDARKLY_DYNAMODB_TABLE: launchdarkly-${self:provider.stage}
     LAUNCHDARKLY_SDK_KEY: ${ssm:/launchdarkly/${self:provider.stage}/sdkkey~true}
     LAUNCHDARKLY_WEBHOOK_SECRET: ${ssm:/launchdarkly/${self:provider.stage}/webhooksecret~true}
 
@@ -40,29 +37,20 @@ functions:
 
 resources:
   Resources:
-    FeaturesTable:
+    DynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: launchdarkly-${self:provider.stage}-features
+        TableName: launchdarkly-${self:provider.stage}
         AttributeDefinitions:
           - AttributeName: key
+            AttributeType: S
+          - AttributeName: namespace
             AttributeType: S
         KeySchema:
           - AttributeName: key
             KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-    SegmentsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: launchdarkly-${self:provider.stage}-segments
-        AttributeDefinitions:
-          - AttributeName: key
-            AttributeType: S
-        KeySchema:
-          - AttributeName: key
-            KeyType: HASH
+          - AttributeName: namespace
+            KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1

@@ -13,12 +13,12 @@ import (
 // StoreBuilder allows us to access the testing context from within the
 // function passed to RunFeatureStoreTests.
 type StoreBuilder struct {
-	t           *testing.T
-	tablePrefix string
+	t     *testing.T
+	table string
 }
 
 func (builder *StoreBuilder) Build() ld.FeatureStore {
-	store, err := dynamodb.NewDynamoDBFeatureStore(builder.tablePrefix, nil)
+	store, err := dynamodb.NewDynamoDBFeatureStore(builder.table, nil)
 	if err != nil {
 		builder.t.Fatal(err)
 	}
@@ -26,11 +26,11 @@ func (builder *StoreBuilder) Build() ld.FeatureStore {
 }
 
 func TestDynamoDBFeatureStore(t *testing.T) {
-	tablePrefix := os.Getenv("DYNAMODB_TABLE_PREFIX")
-	if tablePrefix == "" {
-		t.Skip("DYNAMODB_TABLE_PREFIX not set in environment")
+	table := os.Getenv("LAUNCHDARKLY_DYNAMODB_TABLE")
+	if table == "" {
+		t.Skip("LAUNCHDARKLY_DYNAMODB_TABLE not set in environment")
 	}
 
-	builder := StoreBuilder{t, tablePrefix}
+	builder := StoreBuilder{t, table}
 	ldtest.RunFeatureStoreTests(t, builder.Build)
 }

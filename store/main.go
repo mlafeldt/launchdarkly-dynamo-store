@@ -48,7 +48,7 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 
 	// Setting up a LaunchDarkly client with a DynamoDBFeatureStore will
 	// sync the data stored in DynamoDB with LaunchDarkly.
-	store, err := dynamodb.NewDynamoDBFeatureStore(os.Getenv("DYNAMODB_TABLE_PREFIX"), nil)
+	store, err := dynamodb.NewDynamoDBFeatureStore(os.Getenv("LAUNCHDARKLY_DYNAMODB_TABLE"), nil)
 	if err != nil {
 		log.Printf("ERROR: Failed to initialize DynamoDBFeatureStore: %s", err)
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, nil
