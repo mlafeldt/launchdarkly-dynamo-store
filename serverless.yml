@@ -19,7 +19,7 @@ provider:
   environment:
     LAUNCHDARKLY_DYNAMODB_TABLE: launchdarkly-${self:provider.stage}
     LAUNCHDARKLY_SDK_KEY: ${ssm:/launchdarkly/${self:provider.stage}/sdkkey~true}
-    LAUNCHDARKLY_WEBHOOK_SECRET: ${ssm:/launchdarkly/${self:provider.stage}/webhooksecret~true}
+    LAUNCHDARKLY_WEBHOOK_SECRET: ${ssm:/launchdarkly/${self:provider.stage}/webhooksecret~true, ''}
 
 package:
   exclude:
