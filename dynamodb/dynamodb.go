@@ -41,8 +41,8 @@ import (
 
 const (
 	// Schema of the DynamoDB table
-	tablePartitionKey = "key"
-	tableSortKey      = "namespace"
+	tablePartitionKey = "namespace"
+	tableSortKey      = "key"
 )
 
 // Verify that the store satisfies the FeatureStore interface
@@ -92,7 +92,7 @@ func NewDynamoDBFeatureStore(table string, logger ld.Logger) (*DynamoDBFeatureSt
 // Init initializes the store by writing the given data to DynamoDB. It will
 // delete all existing data from the table.
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
-	store.Logger.Printf("INFO: Initializing table %s...", store.Table)
+	store.Logger.Printf("INFO: Initializing DynamoDB table %q ...", store.Table)
 
 	var requests []*dynamodb.WriteRequest
 
@@ -164,8 +164,8 @@ func (store *DynamoDBFeatureStore) Get(kind ld.VersionedDataKind, key string) (l
 		TableName:      aws.String(store.Table),
 		ConsistentRead: aws.Bool(true),
 		Key: map[string]*dynamodb.AttributeValue{
-			tablePartitionKey: {S: aws.String(key)},
-			tableSortKey:      {S: aws.String(kind.GetNamespace())},
+			tablePartitionKey: {S: aws.String(kind.GetNamespace())},
+			tableSortKey:      {S: aws.String(key)},
 		},
 	})
 	if err != nil {
@@ -214,12 +214,17 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 	}
 
 	_, err = store.Client.PutItem(&dynamodb.PutItemInput{
-		TableName:           aws.String(store.Table),
-		Item:                av,
-		ConditionExpression: aws.String("attribute_not_exists(#key) or :version > #version"),
+		TableName: aws.String(store.Table),
+		Item:      av,
+		ConditionExpression: aws.String(
+			"attribute_not_exists(#namespace) or " +
+				"attribute_not_exists(#key) or " +
+				":version > #version",
+		),
 		ExpressionAttributeNames: map[string]*string{
-			"#key":     aws.String(tablePartitionKey),
-			"#version": aws.String("version"),
+			"#namespace": aws.String(tablePartitionKey),
+			"#key":       aws.String(tableSortKey),
+			"#version":   aws.String("version"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":version": &dynamodb.AttributeValue{N: aws.String(strconv.Itoa(item.GetVersion()))},
@@ -257,8 +262,8 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 		requests = append(requests, &dynamodb.WriteRequest{
 			DeleteRequest: &dynamodb.DeleteRequest{
 				Key: map[string]*dynamodb.AttributeValue{
-					tablePartitionKey: {S: aws.String(item.GetKey())},
-					tableSortKey:      {S: aws.String(kind.GetNamespace())},
+					tablePartitionKey: {S: aws.String(kind.GetNamespace())},
+					tableSortKey:      {S: aws.String(item.GetKey())},
 				},
 			},
 		})
@@ -315,10 +320,10 @@ func marshalItem(kind ld.VersionedDataKind, item ld.VersionedData) (map[string]*
 		return nil, err
 	}
 
-	// Adding the namespace to the attributes allows us to store everything
+	// Adding the namespace as a partition key allows us to store everything
 	// (feature flags, segments, etc.) in a single DynamoDB table. The
 	// namespace attribute will be ignored when unmarshalling.
-	av[tableSortKey] = &dynamodb.AttributeValue{S: aws.String(kind.GetNamespace())}
+	av[tablePartitionKey] = &dynamodb.AttributeValue{S: aws.String(kind.GetNamespace())}
 
 	return av, nil
 }

@@ -42,14 +42,14 @@ resources:
       Properties:
         TableName: launchdarkly-${self:provider.stage}
         AttributeDefinitions:
-          - AttributeName: key
-            AttributeType: S
           - AttributeName: namespace
+            AttributeType: S
+          - AttributeName: key
             AttributeType: S
         KeySchema:
-          - AttributeName: key
-            KeyType: HASH
           - AttributeName: namespace
+            KeyType: HASH
+          - AttributeName: key
             KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
