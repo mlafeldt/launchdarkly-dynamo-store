@@ -36,6 +36,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	ld "gopkg.in/launchdarkly/go-client.v4"
 )
 
@@ -51,7 +52,7 @@ var _ ld.FeatureStore = (*DynamoDBFeatureStore)(nil)
 // DynamoDBFeatureStore provides a DynamoDB-backed feature store for LaunchDarkly.
 type DynamoDBFeatureStore struct {
 	// Client to access DynamoDB
-	Client *dynamodb.DynamoDB
+	Client dynamodbiface.DynamoDBAPI
 
 	// Name of the DynamoDB table
 	Table string
