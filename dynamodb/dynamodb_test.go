@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	ld "gopkg.in/launchdarkly/go-client.v3"
-	ldtest "gopkg.in/launchdarkly/go-client.v3/shared_test"
+	ld "gopkg.in/launchdarkly/go-client.v4"
+	ldtest "gopkg.in/launchdarkly/go-client.v4/shared_test"
 
 	"github.com/mlafeldt/serverless-ldr/dynamodb"
 )

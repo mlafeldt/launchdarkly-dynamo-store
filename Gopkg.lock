@@ -102,17 +102,17 @@
   version = "v1.2.1"
 
 [[projects]]
-  branch = "v3"
-  name = "gopkg.in/launchdarkly/go-client.v3"
+  name = "gopkg.in/launchdarkly/go-client.v4"
   packages = [
     ".",
     "shared_test"
   ]
-  revision = "da569e13e708d36a5bdbf203b3373f93ab3c12b9"
+  revision = "0d5b77e148a854e4b69347ca8b21a1baabab8677"
+  version = "4.0.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6898a3e2285b10238060189b3a7feaa4e21abd7fd360ef8f27583cd89dea9909"
+  inputs-digest = "e8874ab5a20c9d3e5c653c1ec46f78f09b71e11c316a33fc9e3cb94f90a8f9d1"
   solver-name = "gps-cdcl"
   solver-version = 1
