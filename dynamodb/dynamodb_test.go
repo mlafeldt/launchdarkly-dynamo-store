@@ -7,7 +7,7 @@ import (
 	ld "gopkg.in/launchdarkly/go-client.v4"
 	ldtest "gopkg.in/launchdarkly/go-client.v4/shared_test"
 
-	"github.com/mlafeldt/serverless-ldr/dynamodb"
+	"github.com/mlafeldt/launchdarkly-dynamo-store/dynamodb"
 )
 
 // StoreBuilder allows us to access the testing context from within the

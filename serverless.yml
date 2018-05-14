@@ -1,4 +1,4 @@
-service: serverless-ldr
+service: launchdarkly-dynamo-store
 
 provider:
   name: aws

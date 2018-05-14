@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	ld "gopkg.in/launchdarkly/go-client.v4"
 
-	"github.com/mlafeldt/serverless-ldr/dynamodb"
+	"github.com/mlafeldt/launchdarkly-dynamo-store/dynamodb"
 )
 
 func main() {
