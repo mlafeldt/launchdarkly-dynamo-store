@@ -57,7 +57,7 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	config := ld.DefaultConfig
 	config.FeatureStore = store
 
-	ldClient, err := ld.MakeCustomClient(os.Getenv("LAUNCHDARKLY_SDK_KEY"), config, 5*time.Second)
+	ldClient, err := ld.MakeCustomClient(os.Getenv("LAUNCHDARKLY_SDK_KEY"), config, 10*time.Second)
 	if err != nil {
 		log.Printf("ERROR: Failed to initialize LaunchDarkly client: %s", err)
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, nil
