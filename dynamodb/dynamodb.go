@@ -18,8 +18,9 @@ Here's how to use the feature store with the LaunchDarkly client:
 
 	config := ld.DefaultConfig
 	config.FeatureStore = store
+	config.UseLdd = true // Enable daemon mode to only read flags from DynamoDB
 
-	ldClient, err := ld.MakeCustomClient("SOME_SDK_KEY", config, 5*time.Second)
+	ldClient, err := ld.MakeCustomClient("some-sdk-key", config, 5*time.Second)
 	if err != nil { ... }
 */
 package dynamodb
