@@ -1,3 +1,2 @@
-/.serverless/
-/bin/
-/node_modules/
+.serverless/
+bin/
