@@ -137,9 +137,25 @@ func (store *DynamoDBFeatureStore) Initialized() bool {
 // All returns all items currently stored in DynamoDB that are of the given
 // data kind. (It won't return items marked as deleted.)
 func (store *DynamoDBFeatureStore) All(kind ld.VersionedDataKind) (map[string]ld.VersionedData, error) {
-	items, err := store.allItems()
+	var items []map[string]*dynamodb.AttributeValue
+
+	err := store.Client.QueryPages(&dynamodb.QueryInput{
+		TableName:      aws.String(store.Table),
+		ConsistentRead: aws.Bool(true),
+		KeyConditions: map[string]*dynamodb.Condition{
+			tablePartitionKey: {
+				ComparisonOperator: aws.String("EQ"),
+				AttributeValueList: []*dynamodb.AttributeValue{
+					{S: aws.String(kind.GetNamespace())},
+				},
+			},
+		},
+	}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+		items = append(items, out.Items...)
+		return !lastPage
+	})
 	if err != nil {
-		store.Logger.Printf("ERROR: Failed to get all items: %s", err)
+		store.Logger.Printf("ERROR: Failed to get all %q items: %s", kind.GetNamespace(), err)
 		return nil, err
 	}
 
@@ -280,25 +296,6 @@ func (store *DynamoDBFeatureStore) truncateTable() error {
 	}
 
 	return nil
-}
-
-// allItems returns all items stored in a table.
-func (store *DynamoDBFeatureStore) allItems() ([]map[string]*dynamodb.AttributeValue, error) {
-	var items []map[string]*dynamodb.AttributeValue
-
-	err := store.Client.ScanPages(&dynamodb.ScanInput{
-		TableName:      aws.String(store.Table),
-		ConsistentRead: aws.Bool(true),
-	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
-		items = append(items, out.Items...)
-		return !lastPage
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return items, nil
 }
 
 // batchWriteRequests executes a list of write requests (PutItem or DeleteItem)

@@ -11,6 +11,7 @@ provider:
         - dynamodb:BatchWriteItem
         - dynamodb:GetItem
         - dynamodb:PutItem
+        - dynamodb:Query
         - dynamodb:Scan
       Resource:
         - Fn::GetAtt:
