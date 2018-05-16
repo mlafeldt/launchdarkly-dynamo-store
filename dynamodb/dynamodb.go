@@ -96,15 +96,15 @@ func NewDynamoDBFeatureStore(table string, logger ld.Logger) (*DynamoDBFeatureSt
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
 	store.Logger.Printf("INFO: Initializing DynamoDB table %q ...", store.Table)
 
+	// FIXME: deleting all items before storing new ones is racy, or isn't it?
+	if err := store.truncateTable(); err != nil {
+		store.Logger.Printf("ERROR: Failed to truncate table: %s", err)
+		return err
+	}
+
 	var requests []*dynamodb.WriteRequest
 
 	for kind, items := range allData {
-		// FIXME!
-		if err := store.truncateTable(kind); err != nil {
-			store.Logger.Printf("ERROR: Failed to delete all items: %s", err)
-			return err
-		}
-
 		for k, v := range items {
 			av, err := marshalItem(kind, v)
 			if err != nil {
@@ -245,8 +245,22 @@ func (store *DynamoDBFeatureStore) updateWithVersioning(kind ld.VersionedDataKin
 	return nil
 }
 
-func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) error {
-	items, err := store.allItems()
+// truncateTable deletes all items from the table.
+func (store *DynamoDBFeatureStore) truncateTable() error {
+	var items []map[string]*dynamodb.AttributeValue
+
+	err := store.Client.ScanPages(&dynamodb.ScanInput{
+		TableName:            aws.String(store.Table),
+		ConsistentRead:       aws.Bool(true),
+		ProjectionExpression: aws.String("#namespace, #key"),
+		ExpressionAttributeNames: map[string]*string{
+			"#namespace": aws.String(tablePartitionKey),
+			"#key":       aws.String(tableSortKey),
+		},
+	}, func(out *dynamodb.ScanOutput, lastPage bool) bool {
+		items = append(items, out.Items...)
+		return !lastPage
+	})
 	if err != nil {
 		store.Logger.Printf("ERROR: Failed to get all items: %s", err)
 		return err
@@ -254,20 +268,9 @@ func (store *DynamoDBFeatureStore) truncateTable(kind ld.VersionedDataKind) erro
 
 	var requests []*dynamodb.WriteRequest
 
-	for _, v := range items {
-		item, err := unmarshalItem(kind, v)
-		if err != nil {
-			store.Logger.Printf("ERROR: Failed to unmarshal item: %s", err)
-			return err
-		}
-
+	for _, item := range items {
 		requests = append(requests, &dynamodb.WriteRequest{
-			DeleteRequest: &dynamodb.DeleteRequest{
-				Key: map[string]*dynamodb.AttributeValue{
-					tablePartitionKey: {S: aws.String(kind.GetNamespace())},
-					tableSortKey:      {S: aws.String(item.GetKey())},
-				},
-			},
+			DeleteRequest: &dynamodb.DeleteRequest{Key: item},
 		})
 	}
 
