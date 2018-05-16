@@ -1,5 +1,5 @@
 ENV     = staging
-FUNCS   = store
+FUNCS   = $(subst /,,$(dir $(wildcard */main.go)))
 SERVICE = $(shell awk '/^service:/ {print $$2}' serverless.yml)
 
 staging: ENV=staging
