@@ -94,8 +94,6 @@ func NewDynamoDBFeatureStore(table string, logger ld.Logger) (*DynamoDBFeatureSt
 // Init initializes the store by writing the given data to DynamoDB. It will
 // delete all existing data from the table.
 func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[string]ld.VersionedData) error {
-	store.Logger.Printf("INFO: Initializing DynamoDB table %q ...", store.Table)
-
 	// FIXME: deleting all items before storing new ones is racy, or isn't it?
 	if err := store.truncateTable(); err != nil {
 		store.Logger.Printf("ERROR: Failed to truncate table: %s", err)
@@ -118,11 +116,11 @@ func (store *DynamoDBFeatureStore) Init(allData map[ld.VersionedDataKind]map[str
 	}
 
 	if err := store.batchWriteRequests(requests); err != nil {
-		store.Logger.Printf("ERROR: Failed to write %d items in batches: %s", len(requests), err)
+		store.Logger.Printf("ERROR: Failed to write %d item(s) in batches: %s", len(requests), err)
 		return err
 	}
 
-	store.Logger.Printf("DEBUG: Initialized table with %d items", len(requests))
+	store.Logger.Printf("INFO: Initialized table %q with %d item(s)", store.Table, len(requests))
 
 	store.initialized = true
 
@@ -291,7 +289,7 @@ func (store *DynamoDBFeatureStore) truncateTable() error {
 	}
 
 	if err := store.batchWriteRequests(requests); err != nil {
-		store.Logger.Printf("ERROR: Failed to delete %d items in batches: %s", len(items), err)
+		store.Logger.Printf("ERROR: Failed to delete %d item(s) in batches: %s", len(items), err)
 		return err
 	}
 
