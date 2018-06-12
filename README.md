@@ -15,7 +15,7 @@ To that end, the following building blocks are provided:
 
 ## Architecture
 
-*TODO: Add pretty diagram here.*
+![](pipeline.png)
 
 ## The Serverless Service
 
