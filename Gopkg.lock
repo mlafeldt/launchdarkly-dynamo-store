@@ -25,6 +25,7 @@
     "aws/credentials/ec2rolecreds",
     "aws/credentials/endpointcreds",
     "aws/credentials/stscreds",
+    "aws/csm",
     "aws/defaults",
     "aws/ec2metadata",
     "aws/endpoints",
@@ -46,8 +47,8 @@
     "service/dynamodb/dynamodbiface",
     "service/sts"
   ]
-  revision = "95ba34afe9f6b3e8e10a38c81a51cdffc34f9443"
-  version = "v1.13.51"
+  revision = "f0bbc646e13bfc451409e960cf33239aabb8671a"
+  version = "v1.14.9"
 
 [[projects]]
   name = "github.com/blang/semver"
@@ -70,8 +71,8 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "6529cf7c58879c08d927016dde4477f18a0634cb"
-  version = "v1.36.0"
+  revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
+  version = "v1.37.0"
 
 [[projects]]
   branch = "master"
@@ -85,10 +86,10 @@
   revision = "0b12d6b5"
 
 [[projects]]
-  branch = "master"
   name = "github.com/launchdarkly/eventsource"
   packages = ["."]
-  revision = "4dcc408992f5425530844cb28cb718ea0908c17c"
+  revision = "5e2c13ba9523c8b5f5e33aee7ef3fb1c855f52cd"
+  version = "1.0.0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -99,17 +100,17 @@
 [[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert"]
-  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
-  version = "v1.2.1"
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
 
 [[projects]]
+  branch = "v4"
   name = "gopkg.in/launchdarkly/go-client.v4"
   packages = [
     ".",
     "shared_test"
   ]
-  revision = "0d5b77e148a854e4b69347ca8b21a1baabab8677"
-  version = "4.0.0"
+  revision = "4edfb40541afe72f808165e5be38adc9740aec76"
 
 [solve-meta]
   analyzer-name = "dep"
