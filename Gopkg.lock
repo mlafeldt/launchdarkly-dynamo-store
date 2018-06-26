@@ -47,8 +47,8 @@
     "service/dynamodb/dynamodbiface",
     "service/sts"
   ]
-  revision = "f0bbc646e13bfc451409e960cf33239aabb8671a"
-  version = "v1.14.9"
+  revision = "e79e9fd4ec11ccc242a472f980be78830f9eba80"
+  version = "v1.14.13"
 
 [[projects]]
   name = "github.com/blang/semver"
