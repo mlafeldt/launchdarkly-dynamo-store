@@ -35,6 +35,8 @@ functions:
       - http:
          path: /
          method: post
+      - schedule:
+         rate: rate(1 hour)
 
 resources:
   Resources:
