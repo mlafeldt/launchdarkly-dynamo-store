@@ -36,7 +36,7 @@ functions:
          path: /
          method: post
       - schedule:
-         rate: rate(1 hour)
+         rate: "cron(0 0/1 * * ? *)"
 
 resources:
   Resources:
