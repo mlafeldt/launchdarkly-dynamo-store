@@ -7,5 +7,5 @@ jobs:
     working_directory: /go/src/github.com/mlafeldt/launchdarkly-dynamo-store
     steps:
       - checkout
-      - run: make test
-      - run: make build && ls -lh bin/
+      - run: make test build && ls -lh bin/
+      - run: make test build -C _examples/lambda && ls -lh _examples/lambda/bin/
