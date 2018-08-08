@@ -31,7 +31,7 @@ $ export AWS_REGION=...
 
 # Write your LaunchDarkly SDK key to the AWS Parameter Store. The service uses
 # this key to talk to the LaunchDarkly API, but really any client might use it.
-$ aws ssm put-parameter --name /launchdarkly/staging/sdkkey --value $SDK_KEY --type SecureString
+$ aws ssm put-parameter --name /launchdarkly/staging/sdkkey --value $SDK_KEY --type SecureString --overwrite
 
 # Deploy a service that handles feature flags for the staging environment
 $ make deploy ENV=staging
@@ -92,7 +92,7 @@ LaunchDarkly can also sign webhook payloads so you can verify that requests are 
 To enable webhook signature verification, configure a *Secret* in the LaunchDarkly UI. Then write that same secret to the Parameter Store and redeploy the serverless service for it to validate all future webhook requests:
 
 ```bash
-$ aws ssm put-parameter --name /launchdarkly/staging/webhooksecret --value $SECRET --type SecureString
+$ aws ssm put-parameter --name /launchdarkly/staging/webhooksecret --value $SECRET --type SecureString --overwrite
 $ make staging
 ```
 
