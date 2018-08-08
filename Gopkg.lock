@@ -2,17 +2,20 @@
 
 
 [[projects]]
+  digest = "1:0fa2f3ced4fdd7e36363838e901a67cee693ce1aa1863d7fdde64f86d355780e"
   name = "github.com/aws/aws-lambda-go"
   packages = [
     "events",
     "lambda",
     "lambda/messages",
-    "lambdacontext"
+    "lambdacontext",
   ]
-  revision = "4d30d0ff60440c2d0480a15747c96ee71c3c53d4"
-  version = "v1.2.0"
+  pruneopts = "NUT"
+  revision = "e630af386f8aad6ec9fc899b951cf62d37cfe56f"
+  version = "v1.4.0"
 
 [[projects]]
+  digest = "1:6160be46c99ead56118665c08f066b2d1de67d45547ec9832583d24d8dc32526"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -34,6 +37,7 @@
     "aws/signer/v4",
     "internal/sdkio",
     "internal/sdkrand",
+    "internal/sdkuri",
     "internal/shareddefaults",
     "private/protocol",
     "private/protocol/json/jsonutil",
@@ -45,76 +49,108 @@
     "service/dynamodb",
     "service/dynamodb/dynamodbattribute",
     "service/dynamodb/dynamodbiface",
-    "service/sts"
+    "service/sts",
   ]
-  revision = "e79e9fd4ec11ccc242a472f980be78830f9eba80"
-  version = "v1.14.13"
+  pruneopts = "NUT"
+  revision = "f9728bfcd31e85d264b4ab20299bbbba241c00ca"
+  version = "v1.15.7"
 
 [[projects]]
+  digest = "1:aba270497eb2d49f5cba6f4162d524b9a1195a24cbce8be20bf56a0051f47deb"
   name = "github.com/blang/semver"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
   version = "v3.5.1"
 
 [[projects]]
+  digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = "NUT"
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:db218372c81b9a4e191dc59bd00d62ecdcabaf5daa6161ef60e0228bf17f7ad4"
   name = "github.com/facebookgo/httpcontrol"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "ccde4420e1fee9af5da365cb76075b95683f39a6"
 
 [[projects]]
+  digest = "1:f59266de09e138237bf9df9deb57b9ebbdb1e33b8399bb739c3745e7d3d2787b"
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
-  version = "v1.37.0"
+  pruneopts = "NUT"
+  revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
+  version = "v1.38.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:dccdc65f02deecb82d4f4a087ddc9556402114b6deb9cb8b24cdbd86c7c0aac7"
   name = "github.com/gregjones/httpcache"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "9cad4c3443a7200dd6400aef47183728de563a38"
 
 [[projects]]
+  digest = "1:ac6d01547ec4f7f673311b4663909269bfb8249952de3279799289467837c3cc"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "0b12d6b5"
 
 [[projects]]
+  digest = "1:0ec5fbc0dba6781a50845dbe5c88f1669d8e384aa26003b1ef56b2452ad6ab35"
   name = "github.com/launchdarkly/eventsource"
   packages = ["."]
-  revision = "5e2c13ba9523c8b5f5e33aee7ef3fb1c855f52cd"
-  version = "1.0.0"
+  pruneopts = "NUT"
+  revision = "05e14ea737804fcc8d8c00cdda5e2c873d766fec"
+  version = "1.0.1"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = "NUT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:bacb8b590716ab7c33f2277240972c9582d389593ee8d66fc10074e0508b8126"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
+  pruneopts = "NUT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
 [[projects]]
   branch = "v4"
+  digest = "1:1cb5e5fb92785c8e961f44dad778932b7a31439eae854b0e49db5c5199b87a97"
   name = "gopkg.in/launchdarkly/go-client.v4"
   packages = [
     ".",
-    "shared_test"
+    "shared_test",
   ]
-  revision = "4edfb40541afe72f808165e5be38adc9740aec76"
+  pruneopts = "NUT"
+  revision = "5ef0f1595ea12a33758f758631f8f4ceb5bc6e2e"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "63c77e91b6de0250cdc527ae6207a723f1570e9a0e6a14533ce3ea2c09945ed4"
+  input-imports = [
+    "github.com/aws/aws-lambda-go/events",
+    "github.com/aws/aws-lambda-go/lambda",
+    "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/awserr",
+    "github.com/aws/aws-sdk-go/aws/session",
+    "github.com/aws/aws-sdk-go/service/dynamodb",
+    "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute",
+    "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface",
+    "gopkg.in/launchdarkly/go-client.v4",
+    "gopkg.in/launchdarkly/go-client.v4/shared_test",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

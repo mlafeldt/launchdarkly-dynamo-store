@@ -304,11 +304,9 @@ func (ed *eventDispatcher) isDisabled() bool {
 }
 
 func (ed *eventDispatcher) handleResponse(resp *http.Response) {
-	err := checkStatusCode(resp.StatusCode, resp.Request.URL.String())
-	if err != nil {
-		ed.config.Logger.Printf("Unexpected status code when sending events: %+v", err)
-		if err != nil && err.Code == 401 {
-			ed.config.Logger.Printf("Received 401 error, no further events will be posted since SDK key is invalid")
+	if err := checkForHttpError(resp.StatusCode, resp.Request.URL.String()); err != nil {
+		ed.config.Logger.Println(httpErrorMessage(resp.StatusCode, "posting events", "some events were dropped"))
+		if !isHTTPErrorRecoverable(resp.StatusCode) {
 			ed.stateLock.Lock()
 			defer ed.stateLock.Unlock()
 			ed.disabled = true
@@ -422,7 +420,7 @@ func (t *sendEventsTask) postEvents(outputEvents []interface{}) *http.Response {
 		if respErr != nil {
 			t.logger.Printf("Unexpected error while sending events: %+v", respErr)
 			continue
-		} else if resp.StatusCode >= 500 {
+		} else if resp.StatusCode >= 400 && isHTTPErrorRecoverable(resp.StatusCode) {
 			t.logger.Printf("Received error status %d when sending events", resp.StatusCode)
 			continue
 		} else {

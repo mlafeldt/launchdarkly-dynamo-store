@@ -30,9 +30,10 @@ func (pp *pollingProcessor) Start(closeWhenReady chan<- struct{}) {
 	pp.config.Logger.Printf("Starting LaunchDarkly polling processor with interval: %+v", pp.config.PollInterval)
 
 	ticker := newTickerWithInitialTick(pp.config.PollInterval)
-	defer ticker.Stop()
 
 	go func() {
+		defer ticker.Stop()
+
 		var readyOnce sync.Once
 		notifyReady := func() {
 			readyOnce.Do(func() {
@@ -50,9 +51,9 @@ func (pp *pollingProcessor) Start(closeWhenReady chan<- struct{}) {
 			case <-ticker.C:
 				if err := pp.poll(); err != nil {
 					pp.config.Logger.Printf("ERROR: Error when requesting feature updates: %+v", err)
-					if hse, ok := err.(*HttpStatusError); ok {
-						if hse.Code == 401 {
-							pp.config.Logger.Printf("ERROR: Received 401 error, no further polling requests will be made since SDK key is invalid")
+					if hse, ok := err.(HttpStatusError); ok {
+						pp.config.Logger.Printf("ERROR: %s", httpErrorMessage(hse.Code, "polling request", "will retry"))
+						if !isHTTPErrorRecoverable(hse.Code) {
 							notifyReady()
 							return
 						}
