@@ -34,10 +34,10 @@ functions:
     handler: bin/store
     events:
       - http:
-         path: /
-         method: post
+          path: /
+          method: post
       - schedule:
-         rate: "cron(0 0/1 * * ? *)"
+          rate: "cron(0 0/1 * * ? *)"
 
 resources:
   Resources:
