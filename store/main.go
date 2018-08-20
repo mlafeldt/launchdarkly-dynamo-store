@@ -53,7 +53,7 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	store, err := dynamodb.NewDynamoDBFeatureStore(os.Getenv("LAUNCHDARKLY_DYNAMODB_TABLE"), nil)
 	if err != nil {
 		log.Printf("ERROR: Failed to initialize DynamoDBFeatureStore: %s", err)
-		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, nil
+		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}
 
 	config := ld.DefaultConfig
@@ -62,7 +62,7 @@ func handler(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyRespons
 	ldClient, err := ld.MakeCustomClient(os.Getenv("LAUNCHDARKLY_SDK_KEY"), config, 10*time.Second)
 	if err != nil {
 		log.Printf("ERROR: Failed to initialize LaunchDarkly client: %s", err)
-		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, nil
+		return &events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}
 	defer ldClient.Close()
 
