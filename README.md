@@ -3,6 +3,10 @@
 [![CircleCI](https://circleci.com/gh/mlafeldt/launchdarkly-dynamo-store.svg?style=svg&circle-token=5bd6fb4a2be7d94577cc359c6a74235aed4adc74)](https://circleci.com/gh/mlafeldt/launchdarkly-dynamo-store)
 [![GoDoc](https://godoc.org/github.com/mlafeldt/launchdarkly-dynamo-store/dynamodb?status.svg)](https://godoc.org/github.com/mlafeldt/launchdarkly-dynamo-store/dynamodb)
 
+**Note: LaunchDarkly has implemented [its own DynamoDB store](https://github.com/launchdarkly/go-server-sdk/tree/v4/lddynamodb) based on the one I started here.**
+
+---
+
 This project provides the building blocks that, taken together, allow you to create a *serverless flag storage pipeline for LaunchDarkly* as described in [this presentation](https://speakerdeck.com/mlafeldt/implementing-feature-flags-in-serverless-environments).
 
 By caching feature flag data in DynamoDB, LaunchDarkly clients don't need to call out to the LaunchDarkly API every time they're created. This is useful for environments like AWS Lambda where workloads can be sensitive to cold starts.
